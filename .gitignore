@@ -1,0 +1,7 @@
+/secret_debug.env
+.idea
+*.mp4
+venv
+supervisely_lib
+src/__pycache__
+images/*
