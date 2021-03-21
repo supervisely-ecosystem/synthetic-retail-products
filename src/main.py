@@ -17,14 +17,14 @@ if project_info is None:
 meta = sly.ProjectMeta.from_json(app.public_api.project.get_meta(project_id))
 
 
-def validate_input():
-    if len(meta.obj_classes) == 0:
-        raise ValueError("Project should have at least one class")
-    cnt_valid_classes = o
-    for obj_class in meta.obj_classes:
-        pass
-
-validate_input()
+# def validate_input():
+#     if len(meta.obj_classes) == 0:
+#         raise ValueError("Project should have at least one class")
+#     cnt_valid_classes = o
+#     for obj_class in meta.obj_classes:
+#         pass
+#
+# validate_input()
 
 images_info = {}
 anns = {}
@@ -180,7 +180,7 @@ def main():
 
     init_input_project(app.public_api, data, project_info)
 
-    data["classes"] = meta.obj_classes.items()[0].name
+    state["classes"] = meta.obj_classes.items()[0].name
     data["classOptions"] = {
         "showLabel": False,
         "availableShapes": ["polygon", "bitmap"]

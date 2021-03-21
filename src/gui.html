@@ -15,10 +15,10 @@
                 title="Settings"
                 subtitle="Configure synthetic data generation"
         >
-            <div>{{data.classes}}</div>
+            <div>{{state.classes}}</div>
             <sly-field title="Product class"
                        description="Select class of the labeled products">
-                <sly-select-class :project-id="data.projectId" :classes.sync="data.classes" :options="data.classOptions"></sly-select-class>
+                <sly-select-class :project-id="data.projectId" :classes.sync="state.classes" :options="data.classOptions"></sly-select-class>
             </sly-field>
             <sly-field title="Result image height"
                        description="Width will be resized so that the original aspect ratio is kept">
