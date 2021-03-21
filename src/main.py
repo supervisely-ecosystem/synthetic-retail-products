@@ -15,8 +15,16 @@ if project_info is None:
     raise RuntimeError(f"Project id={project_id} not found")
 
 meta = sly.ProjectMeta.from_json(app.public_api.project.get_meta(project_id))
-if len(meta.obj_classes) == 0:
-    raise ValueError("Project should have at least one class")
+
+
+def validate_input():
+    if len(meta.obj_classes) == 0:
+        raise ValueError("Project should have at least one class")
+    cnt_valid_classes = o
+    for obj_class in meta.obj_classes:
+        pass
+
+validate_input()
 
 images_info = {}
 anns = {}
@@ -172,45 +180,12 @@ def main():
 
     init_input_project(app.public_api, data, project_info)
 
-    # background tab
-    state["tabName"] = "Backgrounds"
-    state["teamId"] = team_id
-    state["workspaceId"] = workspace_id
-    state["bgProjectId"] = None # project_id
-    state["bgDatasets"] = []
-    state["allDatasets"] = True
-
-    #classes tab
-    init_classes_stats(app.public_api, data, state, project_info, meta)
-
-    #augmentations tab
-    init_augs(state)
-    state["taskType"] = "inst-seg"
-    state["highlightInstances"] = False
-
-    # gallery
-    data["gallery"] = empty_gallery
-    state["previewLoading"] = False
-
-    init_progress(data)
-    init_res_project(data, state)
-    state["destProject"] = "newProject"
-    state["resDatasetName"] = "ds0"
-    state["destProjectId"] = None
-    state["resProjectName"] = f"synthetic_{project_info.name}"
-    state["imagesCount"] = 10
-
-    #@TODO: ONLY for debug
-    # state["bgProjectId"] = project_id
-    # state["bgDatasets"] = ["01_background"]
-    # state["allDatasets"] = True
-    # state["tabName"] = "Classes"
-
-    #@TODO: ONLY for debug
-    # state["bgProjectId"] = 2068
-    # state["bgDatasets"] = []
-    # state["allDatasets"] = True
-    # state["tabName"] = "Classes"
+    data["classes"] = meta.obj_classes.items()[0].name
+    data["classOptions"] = {
+        "showLabel": False,
+        "availableShapes": ["polygon", "bitmap"]
+    }
+    state["targetHeight"] = 200
 
     app.run(data=data, state=state, initial_events=[{"command": "cache_annotations"}])
 
