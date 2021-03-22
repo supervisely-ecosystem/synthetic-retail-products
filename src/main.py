@@ -19,7 +19,6 @@ META = sly.ProjectMeta.from_json(app.public_api.project.get_meta(PROJECT_ID))
 
 ALL_IMAGES_INFO = {}  # image id -> image info
 IMAGE_PATH = {} # image id -> local path
-ANNS = {}  # image id -> sly.Annotation
 PRODUCTS = defaultdict(lambda: defaultdict(list))  # tag name (i.e. product-id) -> image id -> list of labels
 
 # for debug
@@ -73,7 +72,7 @@ def validate_project_meta():
 
 
 def cache_annotations(api: sly.Api, task_id, data):
-    global PRODUCTS, ANNS, IMAGE_PATH
+    global PRODUCTS, IMAGE_PATH
 
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
@@ -114,7 +113,6 @@ def cache_annotations(api: sly.Api, task_id, data):
                 num_images_with_products += 1
                 num_product_examples += num_image_products
 
-                ANNS[image_id] = ann
                 ALL_IMAGES_INFO[image_id] = image_info
 
                 download_path = os.path.join(cache_dir, str(image_id) + sly.fs.get_file_ext(image_info.name))
@@ -129,6 +127,20 @@ def cache_annotations(api: sly.Api, task_id, data):
             if len(download_ids) != 0:
                 progress_images = sly.Progress("Cache images", len(download_ids))
                 api.image.download_paths(dataset.id, download_ids, download_paths, progress_images.iters_done_report)
+
+    # save without alpha
+    for id, path in IMAGE_PATH.items():
+        img = sly.image.read(path)
+        sly.image.write(path, img)
+
+    # progress = sly.Progress("Preparing labels crops", len(num_product_examples))
+    # for product_id, image_labels in PRODUCTS.items():
+    #     for image_id, labels in image_labels.items():
+    #         img_path = IMAGE_PATH[image_id]
+    #         img = sly.image.read(IMAGE_PATH[image_id])
+    #         for label in labels:
+    #             ann = sly.Annotation
+
 
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
@@ -196,7 +208,7 @@ def main():
 
     app.run(data=data, state=state)
 
-
+#@TODO: remove noise from image
 #@TODO: README: it is allowed to label several product examples on a single image
 #@TODO: README: target background color vs original
 #@TODO: motion blur + other augs
