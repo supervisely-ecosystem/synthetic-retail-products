@@ -1,6 +1,8 @@
 import os
 from collections import defaultdict
 import random
+import cv2
+import numpy as np
 import supervisely_lib as sly
 
 from init_ui import init_input_project, init_settings, init_preview
@@ -76,6 +78,7 @@ def cache_annotations(api: sly.Api, task_id, data):
 
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
+    sly.fs.clean_dir(cache_dir)
 
     num_images_with_products = 0
     num_product_examples = 0
@@ -128,18 +131,13 @@ def cache_annotations(api: sly.Api, task_id, data):
                 progress_images = sly.Progress("Cache images", len(download_ids))
                 api.image.download_paths(dataset.id, download_ids, download_paths, progress_images.iters_done_report)
 
-    # save without alpha
-    for id, path in IMAGE_PATH.items():
-        img = sly.image.read(path)
-        sly.image.write(path, img)
-
-    # progress = sly.Progress("Preparing labels crops", len(num_product_examples))
-    # for product_id, image_labels in PRODUCTS.items():
-    #     for image_id, labels in image_labels.items():
-    #         img_path = IMAGE_PATH[image_id]
-    #         img = sly.image.read(IMAGE_PATH[image_id])
-    #         for label in labels:
-    #             ann = sly.Annotation
+    progress = sly.Progress("Preparing labels crops", num_product_examples)
+    for product_id, image_labels in PRODUCTS.items():
+        for image_id, labels in image_labels.items():
+            img_path = IMAGE_PATH[image_id]
+            img = sly.image.read(IMAGE_PATH[image_id])
+            for label in labels:
+                ann = sly.Annotation
 
 
     progress = sly.Progress("App is ready", 1)
