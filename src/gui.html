@@ -7,10 +7,10 @@
         </sly-field>
         <sly-field title="Stats"
                    description="Labeled products stats">
-            <div>Total images: {{data.projectItemsCount}}</div>
+            <div>Images: {{data.projectItemsCount}}</div>
             <div class="mt5">Images with products: {{data.imagesWithProductsCount}}</div>
-            <div class="mt5">Number of products: {{data.productsCount}}</div>
-            <div class="mt5">Number of labeled examples for all products: {{data.examplesCount}}</div>
+            <div class="mt5">Products: {{data.productsCount}}</div>
+            <div class="mt5">Labeled examples for all products: {{data.examplesCount}}</div>
         </sly-field>
     </sly-card>
 
@@ -37,6 +37,12 @@
             <sly-field title="Validation examples per product"
                        description="How many valdation images will be generated for every product">
                 <el-input-number v-model="state.valCount" :min="1" :max="2000"></el-input-number>
+            </sly-field>
+            <sly-field title="Generated project stats"
+                       description="Number of images in training / validation">
+                <div>Training images: {{data.productsCount}} * {{state.trainCount}} = {{data.productsCount * state.trainCount}}</div>
+                <div class="mt5">Validation images: {{data.productsCount}} * {{state.valCount}} = {{data.productsCount * state.valCount}}</div>
+                <div class="mt5">Total images: {{data.productsCount * state.trainCount + data.productsCount * state.valCount}}</div>
             </sly-field>
 
 

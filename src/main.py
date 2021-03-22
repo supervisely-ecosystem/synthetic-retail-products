@@ -182,7 +182,6 @@ def main():
 
 #@TODO: README: it is allowed to label several product examples on a single image
 #@TODO: README: target background color vs original
-#@TODO: skip label if has len(tags) != 1
-#@TODO: tag with none value (link to example snacks project)
+#@TODO: motion blur + other augs
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
