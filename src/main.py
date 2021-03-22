@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+import random
 import supervisely_lib as sly
 
 from init_ui import init_input_project, init_settings, init_preview
@@ -17,9 +18,14 @@ META = sly.ProjectMeta.from_json(app.public_api.project.get_meta(PROJECT_ID))
 
 
 ALL_IMAGES_INFO = {}  # image id -> image info
+IMAGE_PATH = {} # image id -> local path
 ANNS = {}  # image id -> sly.Annotation
 PRODUCTS = defaultdict(lambda: defaultdict(list))  # tag name (i.e. product-id) -> image id -> list of labels
 
+# for debug
+vis_dir = "../images"
+sly.fs.mkdir(vis_dir)
+sly.fs.clean_dir(vis_dir)
 
 # CNT_GRID_COLUMNS = 1
 # empty_gallery = {
@@ -67,18 +73,19 @@ def validate_project_meta():
 
 
 def cache_annotations(api: sly.Api, task_id, data):
-    global PRODUCTS, ANNS
+    global PRODUCTS, ANNS, IMAGE_PATH
 
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
 
     num_images_with_products = 0
     num_product_examples = 0
-    num_product_classes = 0
 
     progress = sly.Progress("Cache annotations", PROJECT_INFO.items_count)
     for dataset in api.dataset.get_list(PROJECT_ID):
         images = api.image.get_list(dataset.id)
+        download_ids = []
+        download_paths = []
         for batch in sly.batched(images):
             image_ids = [image_info.id for image_info in batch]
             ann_infos = api.annotation.download_batch(dataset.id, image_ids)
@@ -109,7 +116,19 @@ def cache_annotations(api: sly.Api, task_id, data):
 
                 ANNS[image_id] = ann
                 ALL_IMAGES_INFO[image_id] = image_info
+
+                download_path = os.path.join(cache_dir, str(image_id) + sly.fs.get_file_ext(image_info.name))
+                IMAGE_PATH[image_id] = download_path
+                if sly.fs.file_exists(download_path):
+                    continue
+                download_ids.append(image_id)
+                download_paths.append(download_path)
+
             progress.iters_done_report(len(batch))
+
+            if len(download_ids) != 0:
+                progress_images = sly.Progress("Cache images", len(download_ids))
+                api.image.download_paths(dataset.id, download_ids, download_paths, progress_images.iters_done_report)
 
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
@@ -122,42 +141,40 @@ def cache_annotations(api: sly.Api, task_id, data):
 @app.callback("preview")
 @sly.timeit
 def preview(api: sly.Api, task_id, context, state, app_logger):
-    bg_images = update_bg_images(api, state)
+    product_id = random.choice(list(PRODUCTS.keys()))
+    image_id = random.choice(list(PRODUCTS[product_id].keys()))
+    label = random.choice(list(PRODUCTS[product_id][image_id]))
 
-    if len(bg_images) == 0:
-        sly.logger.warn("There are no background images")
-    else:
-        cache_dir = os.path.join(app.data_dir, "cache_images_preview")
-        sly.fs.mkdir(cache_dir)
-        sly.fs.clean_dir(cache_dir)
-        img, ann, res_meta = synthesize(api, task_id, state, meta, images_info, labels, bg_images, cache_dir)
-        res_meta, ann = postprocess(state, ann, res_meta, sly.ProjectMeta())
-        if state["taskType"] == "inst-seg" and state["highlightInstances"] is True:
-            res_meta, ann = highlight_instances(res_meta, ann)
-        src_img_path = os.path.join(cache_dir, "res.png")
-        dst_img_path = os.path.join(f"/flying_object/{task_id}", "res.png")
-        sly.image.write(src_img_path, img)
+    img = sly.image.read(IMAGE_PATH[image_id])
+    sly.image.write(os.path.join(vis_dir, "img.jpg"), img)
 
-        file_info = None
-        if api.file.exists(team_id, dst_img_path):
-            api.file.remove(team_id, dst_img_path)
-        file_info = api.file.upload(team_id, src_img_path, dst_img_path)
+    # ann = sly.Annotation.from_img_path
+    # sly.aug.crop(img, sly.Annotation)
 
-        gallery = dict(empty_gallery)
-        gallery["content"]["projectMeta"] = res_meta.to_json()
-        gallery["content"]["annotations"] = {
-            "preview": {
-                "url": file_info.full_storage_url,
-                "figures": [label.to_json() for label in ann.labels]
-            }
-        }
-        gallery["content"]["layout"] = [["preview"]]
-
-    fields = [
-        {"field": "data.gallery", "payload": gallery},
-        {"field": "state.previewLoading", "payload": False},
-    ]
-    api.task.set_fields(task_id, fields)
+    # src_img_path = os.path.join(cache_dir, "res.png")
+    # dst_img_path = os.path.join(f"/flying_object/{task_id}", "res.png")
+    # sly.image.write(src_img_path, img)
+    #
+    # file_info = None
+    # if api.file.exists(team_id, dst_img_path):
+    #     api.file.remove(team_id, dst_img_path)
+    # file_info = api.file.upload(team_id, src_img_path, dst_img_path)
+    #
+    # gallery = dict(empty_gallery)
+    # gallery["content"]["projectMeta"] = res_meta.to_json()
+    # gallery["content"]["annotations"] = {
+    #     "preview": {
+    #         "url": file_info.full_storage_url,
+    #         "figures": [label.to_json() for label in ann.labels]
+    #     }
+    # }
+    # gallery["content"]["layout"] = [["preview"]]
+    #
+    # fields = [
+    #     {"field": "data.gallery", "payload": gallery},
+    #     {"field": "state.previewLoading", "payload": False},
+    # ]
+    # api.task.set_fields(task_id, fields)
 
 
 @app.callback("generate")

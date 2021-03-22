@@ -16,3 +16,7 @@ target:
     ElasticTransformation:
       alpha: (0, 40)
       sigma: (4, 8)
+
+noise:
+  occlusion_height: 0.75
+  occlusion_width: 0.75

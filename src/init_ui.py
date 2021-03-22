@@ -39,8 +39,8 @@ def init_settings(data, state):
         "availableShapes": ["polygon", "bitmap"]
     }
     init_augs(state)
-    state["trainCount"] = 200
-    state["valCount"] = 20
+    state["trainCount"] = 20  #@TODO: 200
+    state["valCount"] = 2  #@TODO: 20
 
 
 
