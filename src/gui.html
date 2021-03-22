@@ -2,9 +2,15 @@
     <sly-card title="Input Project" subtitle="Project with labeled foreground objects">
         <sly-field title="" description="Input Data">
             <a slot="title" target="_blank"
-               :href="`/projects/${data.projectId}/datasets`">{{data.projectName}} ({{data.projectItemsCount}}
-                images)</a>
+               :href="`/projects/${data.projectId}/datasets`">{{data.projectName}}</a>
             <sly-icon slot="icon" :options="{ imageUrl: `${data.projectPreviewUrl}` }"/>
+        </sly-field>
+        <sly-field title="Stats"
+                   description="Labeled products stats">
+            <div>Total images: {{data.projectItemsCount}}</div>
+            <div class="mt5">Images with products: {{data.imagesWithProductsCount}}</div>
+            <div class="mt5">Number of products: {{data.productsCount}}</div>
+            <div class="mt5">Number of labeled examples for all products: {{data.examplesCount}}</div>
         </sly-field>
     </sly-card>
 
@@ -22,8 +28,18 @@
             </sly-field>
             <sly-field title="Augmentations"
                        description="">
-                <sly-editor v-model="state.augs" :options="{height: '450px', mode: 'ace/mode/yaml'}"></sly-editor>
+                <sly-editor v-model="state.augs" :options="{height: '300px', mode: 'ace/mode/yaml'}"></sly-editor>
             </sly-field>
+            <sly-field title="Training examples per product"
+                       description="How many training images will be generated for every product">
+                <el-input-number v-model="state.trainCount" :min="1" :max="10000"></el-input-number>
+            </sly-field>
+            <sly-field title="Validation examples per product"
+                       description="How many valdation images will be generated for every product">
+                <el-input-number v-model="state.valCount" :min="1" :max="2000"></el-input-number>
+            </sly-field>
+
+
         </sly-card>
         <sly-card
                 style="width: 65%;"
@@ -42,192 +58,4 @@
             </div>
         </sly-card>
     </div>
-
-    <!--    <sly-card class="mt15"-->
-    <!--              title="Settings"-->
-    <!--              subtitle="Configure parameters of synthetic data generation">-->
-    <!--        <el-tabs v-model="state.tabName">-->
-    <!--            <el-tab-pane label="1. Backgrounds" name="Backgrounds">-->
-    <!--                <sly-select-team-workspace-->
-    <!--                        :team-id.sync="state.teamId"-->
-    <!--                        :workspace-id.sync="state.workspaceId">-->
-    <!--                </sly-select-team-workspace>-->
-    <!--                <sly-select-project-->
-    <!--                        :workspace-id="state.workspaceId"-->
-    <!--                        :project-id.sync="state.bgProjectId">-->
-    <!--                </sly-select-project>-->
-    <!--                <el-checkbox class="mt15" v-model="state.allDatasets">All datasets</el-checkbox>-->
-    <!--                <sly-select-dataset-->
-    <!--                        v-show="!state.allDatasets"-->
-    <!--                        :project-id="state.bgProjectId"-->
-    <!--                        :datasets.sync="state.bgDatasets"-->
-    <!--                        :options="{'multiple': true}">-->
-    <!--                </sly-select-dataset>-->
-
-    <!--            </el-tab-pane>-->
-    <!--            <el-tab-pane label="2. Classes" name="Classes">-->
-    <!--                <div v-if="data.classes.length === 0">Project does not have any classes</div>-->
-    <!--                <div v-if="data.classes.length > 0">-->
-    <!--                    <el-table-->
-    <!--                            class="ultra-table"-->
-    <!--                            :data="data.classes"-->
-    <!--                            style="width: 100%"-->
-    <!--                            @selection-change="-->
-    <!--                (val) => {-->
-    <!--                    state.selectedClasses = val.map(x => x.title);-->
-    <!--                }-->
-    <!--                "-->
-    <!--                    >-->
-    <!--                        <el-table-column type="selection" width="55"></el-table-column>-->
-    <!--                        <el-table-column label="Name" prop="title" sortable>-->
-    <!--                            <template scope="scope">-->
-    <!--                                <i class="zmdi zmdi-circle mr5" :style="{color: scope.row.color}"></i>-->
-    <!--                                {{ scope.row.title }}-->
-    <!--                            </template>-->
-    <!--                        </el-table-column>-->
-    <!--                        <el-table-column prop="shape" label="Shape" sortable></el-table-column>-->
-    <!--                        <el-table-column prop="imagesCount" label="Images" sortable></el-table-column>-->
-    <!--                        <el-table-column prop="objectsCount" label="Objects" sortable></el-table-column>-->
-    <!--                    </el-table>-->
-    <!--                </div>-->
-    <!--            </el-tab-pane>-->
-    <!--            <el-tab-pane label="3. Augmentations" name="Augmentations">-->
-    <!--                <sly-editor v-model="state.augs" :options="{height: '450px', mode: 'ace/mode/yaml'}"></sly-editor>-->
-    <!--            </el-tab-pane>-->
-    <!--            <el-tab-pane label="4. Postprocessing" name="Postprocessing">-->
-    <!--                <sly-field title="Output task type"-->
-    <!--                           description="How final labels have to be processed (learn more in readme)">-->
-    <!--                    &lt;!&ndash;                    <el-radio-group v-model="state.taskType">&ndash;&gt;-->
-    <!--                    <div style="display: flex; flex-direction: column">-->
-    <!--                        <el-radio v-model="state.taskType" label="seg">-->
-    <!--                            <span>Segmentation</span>-->
-    <!--                            <span style="color: gray"> - all objects of same class on image will be merged to a single mask</span>-->
-    <!--                        </el-radio>-->
-    <!--                        <el-radio v-model="state.taskType" class="mt5" label="det" style="margin-left: 0">-->
-    <!--                            <span>Detection</span>-->
-    <!--                            <span style="color: gray"> - masks will be transformed to bounding boxes</span>-->
-    <!--                        </el-radio>-->
-    <!--                        <el-radio v-model="state.taskType" class="mt5" label="inst-seg" style="margin-left: 0">-->
-    <!--                            <span>Instance Segmentation</span>-->
-    <!--                            <span style="color: gray"> - separate mask for every object</span>-->
-    <!--                        </el-radio>-->
-    <!--                        <div class="mt5" style="margin-left: 25px">-->
-    <!--                            <el-checkbox v-model="state.highlightInstances" :disabled="state.taskType !== 'inst-seg'">-->
-    <!--                                Use random colors to highlight object instances in Preview-->
-    <!--                            </el-checkbox>-->
-    <!--                        </div>-->
-    <!--                    </div>-->
-    <!--                    &lt;!&ndash;                    </el-radio-group>&ndash;&gt;-->
-    <!--                </sly-field>-->
-    <!--            </el-tab-pane>-->
-
-    <!--        </el-tabs>-->
-    <!--    </sly-card>-->
-
-    <!--    <sly-card class="mt15"-->
-    <!--              title="Random preview"-->
-    <!--              subtitle="Preview synthetic image and labels, overlapping is handled automatically, fully covered objects will be skipped">-->
-    <!--        <div slot="header">-->
-    <!--            <el-button-->
-    <!--                    type="primary"-->
-    <!--                    @click="state.previewLoading = true; command('preview')"-->
-    <!--                    :disabled="state.selectedClasses.filter(Boolean).length === 0 ||-->
-    <!--                               !state.bgProjectId ||-->
-    <!--                               (state.allDatasets === false && state.bgDatasets.length === 0)"-->
-    <!--                    :loading="state.previewLoading"-->
-    <!--            >-->
-    <!--                <i class="zmdi zmdi-slideshow" style="margin-right: 5px"></i> Preview-->
-    <!--            </el-button>-->
-    <!--        </div>-->
-    <!--        <div class="fflex" v-show="state.previewLoading">-->
-    <!--            <el-progress :percentage="data.progressPercentPreview" style="flex: 1;"></el-progress>-->
-    <!--            <div>{{data.progressCurrentPreview}} / {{data.progressTotalPreview}}</div>-->
-    <!--        </div>-->
-    <!--        <sly-grid-gallery-->
-    <!--                v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"-->
-    <!--                :content="data.gallery.content"-->
-    <!--                :options="data.gallery.options"/>-->
-    <!--        <div v-show="Object.keys(data.gallery.content.annotations).length === 0 && !state.previewLoading">-->
-    <!--            Gallery is empty, press Preview button to visualize examples-->
-    <!--        </div>-->
-    <!--    </sly-card>-->
-
-    <!--    <sly-card class="mt15"-->
-    <!--              title="Output"-->
-    <!--              subtitle="Define result project name and how many images have to be generated">-->
-    <!--        &lt;!&ndash;        v-if="!data.resProjectId"&ndash;&gt;-->
-    <!--        <div>-->
-    <!--            <sly-field title="Images count"-->
-    <!--                       description="How many images should be generated">-->
-    <!--                <el-input-number v-model="state.imagesCount" :min="1" :max="1000"></el-input-number>-->
-    <!--            </sly-field>-->
-    <!--            <sly-field title="Output project and dataset"-->
-    <!--                       description="Set where to save synthetic images">-->
-    <!--                <div style="display: flex; flex-direction: column">-->
-    <!--                    <el-radio v-model="state.destProject" label="newProject">-->
-    <!--                        <span>Create new project</span>-->
-    <!--                    </el-radio>-->
-    <!--                    <div v-show="state.destProject === 'newProject'" class="mt5" style="margin-left: 25px">-->
-    <!--                        <div class="fflex">-->
-    <!--                            <span style="width: 120px">Project name:</span>-->
-    <!--                            <el-input v-model="state.resProjectName"></el-input>-->
-    <!--                        </div>-->
-    <!--                        <div class="fflex mt5">-->
-    <!--                            <span style="width: 120px">Dataset name:</span>-->
-    <!--                            <el-input v-model="state.resDatasetName"></el-input>-->
-    <!--                        </div>-->
-    <!--                    </div>-->
-    <!--                    <el-radio v-model="state.destProject" class="mt5" label="existingProject" style="margin-left: 0">-->
-    <!--                        <span>Add to existing project</span>-->
-    <!--                        &lt;!&ndash;                        <span style="color: gray"> - additional classes will be added automatically</span>&ndash;&gt;-->
-    <!--                    </el-radio>-->
-    <!--                    <div v-if="state.destProject === 'existingProject'" class="mt5" style="margin-left: 25px">-->
-    <!--                        <div class="fflex">-->
-    <!--                            <span style="width: 120px">Project name:</span>-->
-    <!--                            <sly-select-project :workspace-id="state.workspaceId"-->
-    <!--                                                :project-id.sync="state.destProjectId"-->
-    <!--                                                :options="{'showLabel': false}">-->
-    <!--                            </sly-select-project>-->
-    <!--                        </div>-->
-    <!--                        <div class="fflex mt5">-->
-    <!--                            <span style="min-width: 120px">Dataset name:</span>-->
-    <!--                            <el-input v-model="state.resDatasetName"></el-input>-->
-    <!--                        </div>-->
-    <!--                    </div>-->
-    <!--                </div>-->
-    <!--            </sly-field>-->
-    <!--            <el-button-->
-    <!--                    type="primary"-->
-    <!--                    :loading="data.started"-->
-    <!--                    @click="data.started = true; command('generate')"-->
-    <!--                    :disabled="state.selectedClasses.filter(Boolean).length === 0 ||-->
-    <!--                               !state.bgProjectId ||-->
-    <!--                               (state.allDatasets === false && state.bgDatasets.length === 0) ||-->
-    <!--                               (state.destProject === 'existingProject' && !state.destProjectId) ||-->
-    <!--                               (state.destProject === 'newProject' && state.resProjectName.length === 0) ||-->
-    <!--                               (state.resDatasetName.length === 0)">-->
-    <!--                Generate-->
-    <!--            </el-button>-->
-    <!--            <div class="fflex mt10" v-if="data.started === true">-->
-    <!--                <div class="mr10" style="width: 120px;">Objects on image:</div>-->
-    <!--                <el-progress :percentage="data.progressPercent" style="flex: 1"></el-progress>-->
-    <!--                <div class="ml10" style="flex: none;">[{{data.progressCurrent}} / {{data.progressTotal}}]</div>-->
-    <!--            </div>-->
-    <!--            <div class="fflex mt10" v-if="data.started === true">-->
-    <!--                <div class="mr10" style="width: 120px;">Generated images:</div>-->
-    <!--                <el-progress :percentage="data.progressPercentImages" style="flex: 1"></el-progress>-->
-    <!--                <div class="ml10" style="flex: none;">[{{data.progressCurrentImage}} / {{data.progressTotalImages}}]-->
-    <!--                </div>-->
-    <!--            </div>-->
-    <!--        </div>-->
-    <!--        <div style="margin-top: 30px;">-->
-    <!--            <sly-field class="mt15" v-if="data.resProjectId && !data.started" title="Destination project">-->
-    <!--                <sly-field title="" description="Project">-->
-    <!--                    <a slot="title" target="_blank"-->
-    <!--                       :href="`/projects/${data.resProjectId}/datasets`">{{data.resProjectName}}</a>-->
-    <!--                    <sly-icon slot="icon" :options="{ imageUrl: `${data.resProjectPreviewUrl}` }"/>-->
-    <!--                </sly-field>-->
-    <!--            </sly-field>-->
-    <!--        </div>-->
-    <!--    </sly-card>-->
 </div>

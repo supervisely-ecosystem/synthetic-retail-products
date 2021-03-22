@@ -12,6 +12,7 @@ def init_input_project(api: sly.Api, data: dict, project_info):
     data["projectPreviewUrl"] = api.image.preview_url(project_info.reference_image_url, 100, 100)
     data["projectItemsCount"] = project_info.items_count
 
+    data["imagesWithProductsCount"] = 0
 
 # def init_classes_stats(api: sly.Api, data: dict, state: dict, project_info, project_meta: sly.ProjectMeta):
 #     stats = api.project.get_stats(project_info.id)
@@ -38,6 +39,9 @@ def init_settings(data, state):
         "availableShapes": ["polygon", "bitmap"]
     }
     init_augs(state)
+    state["trainCount"] = 200
+    state["valCount"] = 20
+
 
 
 def init_augs(state: dict):

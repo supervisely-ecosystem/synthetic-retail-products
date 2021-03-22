@@ -6,99 +6,117 @@ from init_ui import init_input_project, init_settings, init_preview
 
 app: sly.AppService = sly.AppService()
 
-team_id = int(os.environ['context.teamId'])
-workspace_id = int(os.environ['context.workspaceId'])
-project_id = int(os.environ['modal.state.slyProjectId'])
+TEAMP_ID = int(os.environ['context.teamId'])
+WORKSPACE_ID = int(os.environ['context.workspaceId'])
+PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
 
-project_info = app.public_api.project.get_info_by_id(project_id)
-if project_info is None:
-    raise RuntimeError(f"Project id={project_id} not found")
-
-meta = sly.ProjectMeta.from_json(app.public_api.project.get_meta(project_id))
-
-
-# def validate_input():
-#     if len(meta.obj_classes) == 0:
-#         raise ValueError("Project should have at least one class")
-#     cnt_valid_classes = o
-#     for obj_class in meta.obj_classes:
-#         pass
-#
-# validate_input()
-
-images_info = {}
-anns = {}
-labels = defaultdict(lambda: defaultdict(list))
+PROJECT_INFO = app.public_api.project.get_info_by_id(PROJECT_ID)
+if PROJECT_INFO is None:
+    raise RuntimeError(f"Project id={PROJECT_ID} not found")
+META = sly.ProjectMeta.from_json(app.public_api.project.get_meta(PROJECT_ID))
 
 
-CNT_GRID_COLUMNS = 1
-empty_gallery = {
-    "content": {
-        "projectMeta": sly.ProjectMeta().to_json(),
-        "annotations": {},
-        "layout": [[] for i in range(CNT_GRID_COLUMNS)]
-    },
-    "previewOptions": {
-        "enableZoom": True,
-        "resizeOnZoom": True
-    },
-    "options": {
-        "enableZoom": False,
-        "syncViews": False,
-        "showPreview": True,
-        "selectable": False,
-        "opacity": 0.5
-    }
-}
+ALL_IMAGES_INFO = {}  # image id -> image info
+ANNS = {}  # image id -> sly.Annotation
+PRODUCTS = defaultdict(lambda: defaultdict(list))  # tag name (i.e. product-id) -> image id -> list of labels
 
 
-@app.callback("validate_classes")
-@sly.timeit
-def validate_classes(api: sly.Api, task_id, context, state, app_logger):
-    if len(meta.obj_classes) == 0:
+# CNT_GRID_COLUMNS = 1
+# empty_gallery = {
+#     "content": {
+#         "projectMeta": sly.ProjectMeta().to_json(),
+#         "annotations": {},
+#         "layout": [[] for i in range(CNT_GRID_COLUMNS)]
+#     },
+#     "previewOptions": {
+#         "enableZoom": True,
+#         "resizeOnZoom": True
+#     },
+#     "options": {
+#         "enableZoom": False,
+#         "syncViews": False,
+#         "showPreview": True,
+#         "selectable": False,
+#         "opacity": 0.5
+#     }
+# }
+
+
+def validate_project_meta():
+    global META
+    if len(META.obj_classes) == 0:
         raise ValueError("Project should have at least one class")
     cnt_valid_classes = 0
-    for obj_class in meta.obj_classes:
+    for obj_class in META.obj_classes:
         obj_class: sly.ObjClass
         if obj_class.geometry_type in [sly.Polygon, sly.Bitmap]:
             cnt_valid_classes += 1
     if cnt_valid_classes == 0:
         raise ValueError("Project should have at least one class of type polygon or bitmap")
 
+    if len(META.tag_metas) == 0:
+        raise ValueError("Project should have at least two tags")
+    cnt_valid_tags = 0
+    for tag_meta in META.tag_metas:
+        tag_meta: sly.TagMeta
+        if tag_meta.value_type != sly.TagValueType.NONE:
+            continue
+        cnt_valid_tags += 1
+    if cnt_valid_tags <= 1:
+        raise ValueError("Project should have at least two tags with value_type NONE (tags without values)")
 
-@app.callback("cache_annotations")
-@sly.timeit
-def cache_annotations(api: sly.Api, task_id, context, state, app_logger):
+
+def cache_annotations(api: sly.Api, task_id, data):
+    global PRODUCTS, ANNS
+
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
 
-    num_images = 0
-    num_products = 0
-    num_classes = 0
+    num_images_with_products = 0
+    num_product_examples = 0
+    num_product_classes = 0
 
-    products = defaultdict(lambda: defaultdict(list))
-    progress = sly.Progress("Cache annotations", project_info.items_count)
-    for dataset in api.dataset.get_list(project_id):
+    progress = sly.Progress("Cache annotations", PROJECT_INFO.items_count)
+    for dataset in api.dataset.get_list(PROJECT_ID):
         images = api.image.get_list(dataset.id)
         for batch in sly.batched(images):
             image_ids = [image_info.id for image_info in batch]
             ann_infos = api.annotation.download_batch(dataset.id, image_ids)
             for image_id, image_info, ann_info in zip(image_ids, batch, ann_infos):
-                ann = sly.Annotation.from_json(ann_info.annotation, meta)
-                if len(ann.img_tags) == 0:
-                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tag")
-                    continue
-                if len(ann.img_tags) != 1:
-                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tag")
+                ann = sly.Annotation.from_json(ann_info.annotation, META)
 
-                anns[image_id] = ann
-                images_info[image_id] = image_info
+                if len(ann.labels) == 0:
+                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have labels")
+
+                num_image_products = 0
                 for label in ann.labels:
-                    labels[label.obj_class.name][image_id].append(label)
+                    label: sly.Label
+                    if len(label.tags) == 0:
+                        continue
+                    elif len(label.tags) > 1:
+                        continue
+                    num_image_products += 1
+                    # always one item in collection
+                    for tag in label.tags:
+                        PRODUCTS[tag.name][image_id].append(label)
+
+                if num_image_products == 0:
+                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tagged products")
+                    continue
+
+                num_images_with_products += 1
+                num_product_examples += num_image_products
+
+                ANNS[image_id] = ann
+                ALL_IMAGES_INFO[image_id] = image_info
             progress.iters_done_report(len(batch))
 
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
+
+    data["imagesWithProductsCount"] = num_images_with_products
+    data["productsCount"] = len(PRODUCTS.keys())
+    data["examplesCount"] = num_product_examples
 
 
 @app.callback("preview")
@@ -146,66 +164,25 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
 @sly.timeit
 def generate(api: sly.Api, task_id, context, state, app_logger):
     pass
-    # bg_images = update_bg_images(api, state)
-    #
-    # if len(bg_images) == 0:
-    #     sly.logger.warn("There are no background images")
-    # else:
-    #     cache_dir = os.path.join(app.data_dir, "cache_images_generate")
-    #     sly.fs.mkdir(cache_dir)
-    #     sly.fs.clean_dir(cache_dir)
-    #
-    #     if state["destProject"] == "newProject":
-    #         res_project_name = state["resProjectName"]
-    #         if res_project_name == "":
-    #             res_project_name = "synthetic"
-    #         res_project = api.project.create(workspace_id, res_project_name, change_name_if_conflict=True)
-    #     elif state["destProject"] == "existingProject":
-    #         res_project = api.project.get_info_by_id(state["destProjectId"])
-    #
-    #     res_dataset = api.dataset.get_or_create(res_project.id, state["resDatasetName"])
-    #     res_meta = sly.ProjectMeta.from_json(api.project.get_meta(res_project.id))
-    #
-    #     progress = sly.Progress("Generating images", state["imagesCount"])
-    #     refresh_progress_images(api, task_id, progress)
-    #     for i in range(state["imagesCount"]):
-    #         img, ann, cur_meta = synthesize(api, task_id, state, meta, images_info, labels, bg_images, cache_dir, preview=False)
-    #         merged_meta, new_ann = postprocess(state, ann, cur_meta, res_meta)
-    #         if res_meta != merged_meta:
-    #             api.project.update_meta(res_project.id, merged_meta.to_json())
-    #             res_meta = merged_meta
-    #         image_info = api.image.upload_np(res_dataset.id, f"{i + res_dataset.items_count}.png", img)
-    #         api.annotation.upload_ann(image_info.id, new_ann)
-    #         progress.iter_done_report()
-    #         if progress.need_report():
-    #             refresh_progress_images(api, task_id, progress)
-    #
-    # res_project = api.project.get_info_by_id(res_project.id)
-    # fields = [
-    #     {"field": "data.started", "payload": False},
-    #     {"field": "data.resProjectId", "payload": res_project.id},
-    #     {"field": "data.resProjectName", "payload": res_project.name},
-    #     {"field": "data.resProjectPreviewUrl", "payload": api.image.preview_url(res_project.reference_image_url, 100, 100)},
-    # ]
-    # api.task.set_fields(task_id, fields)
-    # #app.stop()
 
 
 def main():
     data = {}
     state = {}
 
-    init_input_project(app.public_api, data, project_info)
+    init_input_project(app.public_api, data, PROJECT_INFO)
     init_settings(data, state)
     init_preview(data, state)
 
-    app.run(data=data, state=state, initial_events=[
-        {"command": "validate_classes"},
-        {"command": "cache_annotations"}
-    ])
+    validate_project_meta()
+    cache_annotations(app.public_api, app.task_id, data)
+
+    app.run(data=data, state=state)
 
 
 #@TODO: README: it is allowed to label several product examples on a single image
 #@TODO: README: target background color vs original
+#@TODO: skip label if has len(tags) != 1
+#@TODO: tag with none value (link to example snacks project)
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
