@@ -1,0 +1,18 @@
+# comment aug to disable it
+
+target:
+  background: "random_color"
+  # or
+  #background: "keep_original"
+
+  # height of the result image (pixels)
+  height: 200
+  color:
+    RandomBrightnessContrast: true
+    CLAHE: true
+    Blur: true
+  spacial:
+    Rotate: (-25, 25)
+    ElasticTransformation:
+      alpha: (0, 40)
+      sigma: (4, 8)

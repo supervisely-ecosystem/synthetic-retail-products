@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 import supervisely_lib as sly
 
-from init_ui import init_input_project, init_classes_stats, init_augs, init_progress, init_res_project, refresh_progress_images
+from init_ui import init_input_project, init_settings, init_preview
 
 app: sly.AppService = sly.AppService()
 
@@ -52,9 +52,31 @@ empty_gallery = {
 }
 
 
+@app.callback("validate_classes")
+@sly.timeit
+def validate_classes(api: sly.Api, task_id, context, state, app_logger):
+    if len(meta.obj_classes) == 0:
+        raise ValueError("Project should have at least one class")
+    cnt_valid_classes = 0
+    for obj_class in meta.obj_classes:
+        obj_class: sly.ObjClass
+        if obj_class.geometry_type in [sly.Polygon, sly.Bitmap]:
+            cnt_valid_classes += 1
+    if cnt_valid_classes == 0:
+        raise ValueError("Project should have at least one class of type polygon or bitmap")
+
+
 @app.callback("cache_annotations")
 @sly.timeit
 def cache_annotations(api: sly.Api, task_id, context, state, app_logger):
+    cache_dir = os.path.join(app.data_dir, "cache")
+    sly.fs.mkdir(cache_dir)
+
+    num_images = 0
+    num_products = 0
+    num_classes = 0
+
+    products = defaultdict(lambda: defaultdict(list))
     progress = sly.Progress("Cache annotations", project_info.items_count)
     for dataset in api.dataset.get_list(project_id):
         images = api.image.get_list(dataset.id)
@@ -63,6 +85,12 @@ def cache_annotations(api: sly.Api, task_id, context, state, app_logger):
             ann_infos = api.annotation.download_batch(dataset.id, image_ids)
             for image_id, image_info, ann_info in zip(image_ids, batch, ann_infos):
                 ann = sly.Annotation.from_json(ann_info.annotation, meta)
+                if len(ann.img_tags) == 0:
+                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tag")
+                    continue
+                if len(ann.img_tags) != 1:
+                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tag")
+
                 anns[image_id] = ann
                 images_info[image_id] = image_info
                 for label in ann.labels:
@@ -71,18 +99,6 @@ def cache_annotations(api: sly.Api, task_id, context, state, app_logger):
 
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
-
-
-@app.callback("select_all_classes")
-@sly.timeit
-def select_all_classes(api: sly.Api, task_id, context, state, app_logger):
-    api.task.set_field(task_id, "state.classes", [True] * len(meta.obj_classes))
-
-
-@app.callback("deselect_all_classes")
-@sly.timeit
-def deselect_all_classes(api: sly.Api, task_id, context, state, app_logger):
-    api.task.set_field(task_id, "state.classes", [False] * len(meta.obj_classes))
 
 
 @app.callback("preview")
@@ -129,49 +145,50 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
 @app.callback("generate")
 @sly.timeit
 def generate(api: sly.Api, task_id, context, state, app_logger):
-    bg_images = update_bg_images(api, state)
-
-    if len(bg_images) == 0:
-        sly.logger.warn("There are no background images")
-    else:
-        cache_dir = os.path.join(app.data_dir, "cache_images_generate")
-        sly.fs.mkdir(cache_dir)
-        sly.fs.clean_dir(cache_dir)
-
-        if state["destProject"] == "newProject":
-            res_project_name = state["resProjectName"]
-            if res_project_name == "":
-                res_project_name = "synthetic"
-            res_project = api.project.create(workspace_id, res_project_name, change_name_if_conflict=True)
-        elif state["destProject"] == "existingProject":
-            res_project = api.project.get_info_by_id(state["destProjectId"])
-
-        res_dataset = api.dataset.get_or_create(res_project.id, state["resDatasetName"])
-        res_meta = sly.ProjectMeta.from_json(api.project.get_meta(res_project.id))
-
-        progress = sly.Progress("Generating images", state["imagesCount"])
-        refresh_progress_images(api, task_id, progress)
-        for i in range(state["imagesCount"]):
-            img, ann, cur_meta = synthesize(api, task_id, state, meta, images_info, labels, bg_images, cache_dir, preview=False)
-            merged_meta, new_ann = postprocess(state, ann, cur_meta, res_meta)
-            if res_meta != merged_meta:
-                api.project.update_meta(res_project.id, merged_meta.to_json())
-                res_meta = merged_meta
-            image_info = api.image.upload_np(res_dataset.id, f"{i + res_dataset.items_count}.png", img)
-            api.annotation.upload_ann(image_info.id, new_ann)
-            progress.iter_done_report()
-            if progress.need_report():
-                refresh_progress_images(api, task_id, progress)
-
-    res_project = api.project.get_info_by_id(res_project.id)
-    fields = [
-        {"field": "data.started", "payload": False},
-        {"field": "data.resProjectId", "payload": res_project.id},
-        {"field": "data.resProjectName", "payload": res_project.name},
-        {"field": "data.resProjectPreviewUrl", "payload": api.image.preview_url(res_project.reference_image_url, 100, 100)},
-    ]
-    api.task.set_fields(task_id, fields)
-    #app.stop()
+    pass
+    # bg_images = update_bg_images(api, state)
+    #
+    # if len(bg_images) == 0:
+    #     sly.logger.warn("There are no background images")
+    # else:
+    #     cache_dir = os.path.join(app.data_dir, "cache_images_generate")
+    #     sly.fs.mkdir(cache_dir)
+    #     sly.fs.clean_dir(cache_dir)
+    #
+    #     if state["destProject"] == "newProject":
+    #         res_project_name = state["resProjectName"]
+    #         if res_project_name == "":
+    #             res_project_name = "synthetic"
+    #         res_project = api.project.create(workspace_id, res_project_name, change_name_if_conflict=True)
+    #     elif state["destProject"] == "existingProject":
+    #         res_project = api.project.get_info_by_id(state["destProjectId"])
+    #
+    #     res_dataset = api.dataset.get_or_create(res_project.id, state["resDatasetName"])
+    #     res_meta = sly.ProjectMeta.from_json(api.project.get_meta(res_project.id))
+    #
+    #     progress = sly.Progress("Generating images", state["imagesCount"])
+    #     refresh_progress_images(api, task_id, progress)
+    #     for i in range(state["imagesCount"]):
+    #         img, ann, cur_meta = synthesize(api, task_id, state, meta, images_info, labels, bg_images, cache_dir, preview=False)
+    #         merged_meta, new_ann = postprocess(state, ann, cur_meta, res_meta)
+    #         if res_meta != merged_meta:
+    #             api.project.update_meta(res_project.id, merged_meta.to_json())
+    #             res_meta = merged_meta
+    #         image_info = api.image.upload_np(res_dataset.id, f"{i + res_dataset.items_count}.png", img)
+    #         api.annotation.upload_ann(image_info.id, new_ann)
+    #         progress.iter_done_report()
+    #         if progress.need_report():
+    #             refresh_progress_images(api, task_id, progress)
+    #
+    # res_project = api.project.get_info_by_id(res_project.id)
+    # fields = [
+    #     {"field": "data.started", "payload": False},
+    #     {"field": "data.resProjectId", "payload": res_project.id},
+    #     {"field": "data.resProjectName", "payload": res_project.name},
+    #     {"field": "data.resProjectPreviewUrl", "payload": api.image.preview_url(res_project.reference_image_url, 100, 100)},
+    # ]
+    # api.task.set_fields(task_id, fields)
+    # #app.stop()
 
 
 def main():
@@ -179,21 +196,16 @@ def main():
     state = {}
 
     init_input_project(app.public_api, data, project_info)
+    init_settings(data, state)
+    init_preview(data, state)
 
-    state["classes"] = meta.obj_classes.items()[0].name
-    data["classOptions"] = {
-        "showLabel": False,
-        "availableShapes": ["polygon", "bitmap"]
-    }
-    state["targetHeight"] = 200
-
-    app.run(data=data, state=state, initial_events=[{"command": "cache_annotations"}])
+    app.run(data=data, state=state, initial_events=[
+        {"command": "validate_classes"},
+        {"command": "cache_annotations"}
+    ])
 
 
-#@TODO: ElasticTransformation
-#@TODO: keep foreground w%/h% on background image
-#@TODO: handle invalid augementations from user (validate augmentations)
-#@TODO: check sum of objects for selected classes - disable buttons
-#@TODO: output resolution
+#@TODO: README: it is allowed to label several product examples on a single image
+#@TODO: README: target background color vs original
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
