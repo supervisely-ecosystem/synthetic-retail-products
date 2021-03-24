@@ -276,6 +276,10 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
     for product_id in PRODUCTS.keys():
         dataset = api.dataset.create(res_project.id, str(product_id))
 
+        tag_meta = PRODUCT_TAGS.get(product_id)
+        if tag_meta is None:
+            raise ValueError(f"TagMeta {product_id} not found")
+
         # cache images for one product
         images = {}
         for image_id in PRODUCTS[product_id].keys():
@@ -290,9 +294,11 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
                 image_id = random.choice(list(PRODUCTS[product_id].keys()))
                 img = images[image_id]
                 ann = random.choice(list(PRODUCTS[product_id][image_id]))
-                label_image, label_mask, label_preview = generate_example(augs_settings, augs, preview=False,
+                label_image, label_mask, label_preview = generate_example(augs_settings, augs, preview=True,
                                                                           product_id=product_id, img=img, ann=ann)
-                res_ann = sly.Annotation(label_image[:2], labels=[label_preview], img_tags=sly.TagCollection([tag]))
+                res_ann = sly.Annotation(label_image.shape[:2],
+                                         labels=[label_preview],
+                                         img_tags=sly.TagCollection([tag, sly.Tag(tag_meta)]))
                 final_images.append(label_image)
                 final_anns.append(res_ann)
                 final_names.append("{:05d}.jpg".format(name_index))
@@ -304,7 +310,7 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
             progress.iters_done_report(len(batch))
             if progress.need_report():
                 refresh_progress(api, task_id, progress)
-
+    refresh_progress(api, task_id, progress)
     res_project = api.project.get_info_by_id(res_project.id)
     fields = [
         {"field": "data.started", "payload": False},
