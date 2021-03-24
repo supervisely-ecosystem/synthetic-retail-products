@@ -33,7 +33,8 @@
         >
             <div slot="header">
                 <div class="fflex">
-                    <el-input-number class="mr10" v-model="state.previewCount" :min="1" :max="20" size="small"></el-input-number>
+                    <el-input-number class="mr10" v-model="state.previewCount" :min="1" :max="20"
+                                     size="small"></el-input-number>
                     <el-button
                             type="primary"
                             @click="state.previewLoading = true; command('preview')"
@@ -74,5 +75,31 @@
                 state.valCount}}
             </div>
         </sly-field>
+        <sly-field title="Output project name"
+                   description="New project with synthetic data will be created">
+            <el-input v-model="state.outputProjectName"></el-input>
+        </sly-field>
+        <el-button
+                type="primary"
+                :loading="data.started"
+                @click="data.started = true; command('generate')">
+            Generate
+        </el-button>
+        <div class="fflex mt10" v-if="data.started === true">
+            <div class="mr10" style="width: 120px;">Generated images:</div>
+            <el-progress :percentage="data.progressPercent" style="flex: 1"></el-progress>
+            <div class="ml10" style="flex: none;">[{{data.progressCurrent}} / {{data.progressTotal}}]</div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <sly-field class="mt15" v-if="data.resProjectId && !data.started" title="Destination project">
+                <sly-field title="" description="Project">
+                    <a slot="title" target="_blank"
+                       :href="`/projects/${data.resProjectId}/datasets`">{{data.resProjectName}}</a>
+                    <sly-icon slot="icon" :options="{ imageUrl: `${data.resProjectPreviewUrl}` }"/>
+                </sly-field>
+            </sly-field>
+        </div>
     </sly-card>
+
 </div>

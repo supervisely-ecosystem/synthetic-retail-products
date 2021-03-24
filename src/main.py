@@ -8,7 +8,9 @@ import logging
 import supervisely_lib as sly
 import augs
 
-from init_ui import init_input_project, init_settings, init_preview, empty_gallery, CNT_GRID_COLUMNS
+from init_ui import init_input_project, init_augs, init_preview, empty_gallery, CNT_GRID_COLUMNS, init_output, \
+                    refresh_progress, init_res_project
+
 from synth_utils import crop_label, draw_white_mask, randomize_bg_color
 from synth_utils import crops_funcs, place_funcs, get_y_range, get_x_range
 
@@ -33,6 +35,10 @@ vis_dir = os.path.join(app.data_dir, "vis_images")
 sly.fs.mkdir(vis_dir)
 sly.fs.clean_dir(vis_dir)  # good for debug
 
+RESULT_CLASS = sly.ObjClass("product", sly.Bitmap, [0, 0, 255])
+TRAIN_TAG = sly.TagMeta("train", sly.TagValueType.NONE, color=[0, 255, 0])
+VAL_TAG = sly.TagMeta("val", sly.TagValueType.NONE, color=[255, 255, 0])
+PRODUCT_TAGS = sly.TagMetaCollection()
 
 def validate_project_meta():
     global META
@@ -59,7 +65,7 @@ def validate_project_meta():
 
 
 def cache_annotations(api: sly.Api, task_id, data):
-    global PRODUCTS, IMAGE_PATH
+    global PRODUCTS, IMAGE_PATH, PRODUCT_TAGS
 
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
@@ -93,8 +99,11 @@ def cache_annotations(api: sly.Api, task_id, data):
 
                     # always max one item in collection
                     for tag in label.tags:
+                        tag: sly.Tag
                         ann_for_label = ann.clone(labels=[label])
                         PRODUCTS[tag.name][image_id].append(ann_for_label)
+                        if PRODUCT_TAGS.get(tag.name) is None:
+                            PRODUCT_TAGS = PRODUCT_TAGS.add(tag.meta)
 
                 if num_image_products == 0:
                     sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tagged products")
@@ -151,8 +160,10 @@ def preprocess_product(img, ann, augs_settings, is_main):
     return label_image, label_mask
 
 
-def generate_example(augs_settings, augs=None, preview=True):
-    product_id, img, ann = get_random_product()
+def generate_example(augs_settings, augs=None, preview=True, product_id=None, img=None, ann=None):
+    if product_id is None or img is None or ann is None:
+        product_id, img, ann = get_random_product()
+
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
 
@@ -190,7 +201,7 @@ def generate_example(augs_settings, augs=None, preview=True):
     if preview is True:
         label_preview = sly.Label(
             sly.Bitmap(label_mask[:, :, 0].astype(bool), origin=sly.PointLocation(0, 0)),
-            ann.labels[0].obj_class
+            RESULT_CLASS
         )
 
     return label_image, label_mask, label_preview
@@ -244,7 +255,67 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
 @app.callback("generate")
 @sly.timeit
 def generate(api: sly.Api, task_id, context, state, app_logger):
-    pass
+    global PRODUCT_TAGS
+    products_count = len(PRODUCTS.keys())
+    train_count = state["trainCount"]
+    val_count = state["valCount"]
+    total_count = products_count * (train_count + val_count)
+
+    augs_settings = yaml.safe_load(state["augs"])
+    augs.init_fg_augs(augs_settings)
+
+    PRODUCT_TAGS = PRODUCT_TAGS.add_items([TRAIN_TAG, VAL_TAG])
+    res_meta = sly.ProjectMeta(
+        obj_classes=sly.ObjClassCollection([RESULT_CLASS]),
+        tag_metas=PRODUCT_TAGS
+    )
+    res_project = api.project.create(WORKSPACE_ID, state["outputProjectName"], change_name_if_conflict=True)
+    api.project.update_meta(res_project.id, res_meta.to_json())
+
+    progress = sly.Progress("Generating", total_count)
+    for product_id in PRODUCTS.keys():
+        dataset = api.dataset.create(res_project.id, str(product_id))
+
+        # cache images for one product
+        images = {}
+        for image_id in PRODUCTS[product_id].keys():
+            images[image_id] = sly.image.read(IMAGE_PATH[image_id])
+
+        name_index = 0
+        for batch in sly.batched([TRAIN_TAG] * train_count + [VAL_TAG] * val_count, batch_size=10):
+            final_images = []
+            final_anns = []
+            final_names = []
+            for tag in batch:
+                image_id = random.choice(list(PRODUCTS[product_id].keys()))
+                img = images[image_id]
+                ann = random.choice(list(PRODUCTS[product_id][image_id]))
+                label_image, label_mask, label_preview = generate_example(augs_settings, augs, preview=False,
+                                                                          product_id=product_id, img=img, ann=ann)
+                res_ann = sly.Annotation(label_image[:2], labels=[label_preview], img_tags=sly.TagCollection([tag]))
+                final_images.append(label_image)
+                final_anns.append(res_ann)
+                final_names.append("{:05d}.jpg".format(name_index))
+                name_index += 1
+
+            new_images = api.image.upload_nps(dataset.id, final_names, final_images)
+            new_image_ids = [image_info.id for image_info in new_images]
+            api.annotation.upload_anns(new_image_ids, final_anns)
+            progress.iters_done_report(len(batch))
+            if progress.need_report():
+                refresh_progress(api, task_id, progress)
+
+    res_project = api.project.get_info_by_id(res_project.id)
+    fields = [
+        {"field": "data.started", "payload": False},
+        {"field": "data.resProjectId", "payload": res_project.id},
+        {"field": "data.resProjectName", "payload": res_project.name},
+        {"field": "data.resProjectPreviewUrl",
+         "payload": api.image.preview_url(res_project.reference_image_url, 100, 100)},
+    ]
+    api.task.set_fields(task_id, fields)
+    api.task.set_output_project(task_id, res_project.id, res_project.name)
+    app.stop()
 
 
 def main():
@@ -252,18 +323,17 @@ def main():
     state = {}
 
     init_input_project(app.public_api, data, PROJECT_INFO)
-    init_settings(data, state)
+    init_augs(data, state)
     init_preview(data, state)
+    init_output(data, state)
+    init_res_project(data, state)
 
     validate_project_meta()
     cache_annotations(app.public_api, app.task_id, data)
 
     app.run(data=data, state=state)
 
-
-#@TODO: set max height like in preview
 #@TODO: README: it is allowed to label several product examples on a single image
 #@TODO: README: target background color vs original
-#@TODO: motion blur + other augs
 if __name__ == "__main__":
     sly.main_wrapper("main", main)

@@ -15,17 +15,6 @@ def init_input_project(api: sly.Api, data: dict, project_info):
     data["imagesWithProductsCount"] = 0
 
 
-def init_settings(data, state):
-    # state["class"] = None
-    # data["classOptions"] = {
-    #     "showLabel": False,
-    #     "availableShapes": ["polygon", "bitmap"]
-    # }
-    init_augs(state)
-    state["trainCount"] = 20  #@TODO: 200
-    state["valCount"] = 2  #@TODO: 20
-
-
 def init_augs(state: dict):
     root_source_path = str(Path(sys.argv[0]).parents[0])
     with open(os.path.join(root_source_path, "augs.yaml"), 'r') as file:
@@ -66,51 +55,29 @@ def init_preview(data, state):
     data["gallery"] = empty_gallery
     state["previewCount"] = 4
 
-# def init_progress(data):
-#     data["progressPercentPreview"] = 0
-#     data["progressCurrentPreview"] = 0
-#     data["progressTotalPreview"] = 0
-#
-#     data["progressPercent"] = 0
-#     data["progressCurrent"] = 0
-#     data["progressTotal"] = 0
-#
-#     data["progressPercentImages"] = 0
-#     data["progressCurrentImage"] = 0
-#     data["progressTotalImages"] = 0
+
+def refresh_progress(api: sly.Api, task_id, progress: sly.Progress):
+    fields = [
+        {"field": "data.progressPercent", "payload": int(progress.current * 100 / progress.total)},
+        {"field": "data.progressCurrent", "payload": progress.current},
+        {"field": "data.progressTotal", "payload": progress.total},
+    ]
+    api.task.set_fields(task_id, fields)
 
 
-# def refresh_progress(api: sly.Api, task_id, progress: sly.Progress):
-#     fields = [
-#         {"field": "data.progressPercent", "payload": int(progress.current * 100 / progress.total)},
-#         {"field": "data.progressCurrent", "payload": progress.current},
-#         {"field": "data.progressTotal", "payload": progress.total},
-#     ]
-#     api.task.set_fields(task_id, fields)
+def init_output(data, state):
+    state["trainCount"] = 200
+    state["valCount"] = 20
+    state["outputProjectName"] = "synthetic products"
+    data["progressPercent"] = 0
+    data["progressCurrent"] = 0
+    data["progressTotal"] = 0
 
 
-# def refresh_progress_preview(api: sly.Api, task_id, progress: sly.Progress):
-#     fields = [
-#         {"field": "data.progressPercentPreview", "payload": int(progress.current * 100 / progress.total)},
-#         {"field": "data.progressCurrentPreview", "payload": progress.current},
-#         {"field": "data.progressTotalPreview", "payload": progress.total},
-#     ]
-#     api.task.set_fields(task_id, fields)
-
-
-# def refresh_progress_images(api: sly.Api, task_id, progress: sly.Progress):
-#     fields = [
-#         {"field": "data.progressPercentImages", "payload": int(progress.current * 100 / progress.total)},
-#         {"field": "data.progressCurrentImage", "payload": progress.current},
-#         {"field": "data.progressTotalImages", "payload": progress.total},
-#     ]
-#     api.task.set_fields(task_id, fields)
-
-
-# def init_res_project(data, state):
-#     data["resProjectId"] = None
-#     state["resProjectName"] = None
-#     data["resProjectPreviewUrl"] = None
-#     data["started"] = False
+def init_res_project(data, state):
+    data["resProjectId"] = None
+    state["resProjectName"] = None
+    data["resProjectPreviewUrl"] = None
+    data["started"] = False
 
 
