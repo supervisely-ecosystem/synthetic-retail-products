@@ -5,6 +5,9 @@ target:
   # or
   #background: "keep_original"
 
+  # e.g. 0.2 - additional 20% padding around bbox
+  padCrop: 0.2
+
   # height of the result image (pixels)
   height: 200
   color:

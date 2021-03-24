@@ -23,27 +23,11 @@
         >
             <sly-field title="Augmentations"
                        description="">
-                <sly-editor v-model="state.augs" :options="{height: '300px', mode: 'ace/mode/yaml'}"></sly-editor>
+                <sly-editor v-model="state.augs" :options="{height: '450px', mode: 'ace/mode/yaml'}"></sly-editor>
             </sly-field>
-            <sly-field title="Training examples per product"
-                       description="How many training images will be generated for every product">
-                <el-input-number v-model="state.trainCount" :min="1" :max="10000"></el-input-number>
-            </sly-field>
-            <sly-field title="Validation examples per product"
-                       description="How many valdation images will be generated for every product">
-                <el-input-number v-model="state.valCount" :min="1" :max="2000"></el-input-number>
-            </sly-field>
-            <sly-field title="Generated project stats"
-                       description="Number of images in training / validation">
-                <div>Training images: {{data.productsCount}} * {{state.trainCount}} = {{data.productsCount * state.trainCount}}</div>
-                <div class="mt5">Validation images: {{data.productsCount}} * {{state.valCount}} = {{data.productsCount * state.valCount}}</div>
-                <div class="mt5">Total images: {{data.productsCount * state.trainCount + data.productsCount * state.valCount}}</div>
-            </sly-field>
-
-
         </sly-card>
         <sly-card
-                style="width: 65%;"
+                style="width: 65%; height: 637px;"
                 title="Random preview"
                 subtitle="Preview synthetic image and labels"
         >
@@ -56,6 +40,36 @@
                     <i class="zmdi zmdi-slideshow" style="margin-right: 5px"></i> Preview
                 </el-button>
             </div>
+            <sly-grid-gallery
+                    style="max-height: 250px;"
+                    v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"
+                    :content="data.gallery.content"
+                    :options="data.gallery.options"/>
+            <div v-show="Object.keys(data.gallery.content.annotations).length === 0 && !state.previewLoading">
+                Gallery is empty, press Preview button to visualize examples
+            </div>
         </sly-card>
     </div>
+    <sly-card class="mt15" title="Output Project" subtitle="Project synthetic products">
+        <sly-field title="Training examples per product"
+                   description="How many training images will be generated for every product">
+            <el-input-number v-model="state.trainCount" :min="1" :max="10000"></el-input-number>
+        </sly-field>
+        <sly-field title="Validation examples per product"
+                   description="How many valdation images will be generated for every product">
+            <el-input-number v-model="state.valCount" :min="1" :max="2000"></el-input-number>
+        </sly-field>
+        <sly-field title="Generated project stats"
+                   description="Number of images in training / validation">
+            <div>Training images: {{data.productsCount}} * {{state.trainCount}} = {{data.productsCount *
+                state.trainCount}}
+            </div>
+            <div class="mt5">Validation images: {{data.productsCount}} * {{state.valCount}} = {{data.productsCount *
+                state.valCount}}
+            </div>
+            <div class="mt5">Total images: {{data.productsCount * state.trainCount + data.productsCount *
+                state.valCount}}
+            </div>
+        </sly-field>
+    </sly-card>
 </div>

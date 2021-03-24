@@ -3,14 +3,64 @@ import cv2
 import supervisely_lib as sly
 
 
-def get_label_foreground(img, label: sly.Label):
-    bbox = label.geometry.to_bbox()
-    img_crop = sly.image.crop(img, bbox)
-    new_label = label.translate(drow=-bbox.top, dcol=-bbox.left)
-    h, w = img_crop.shape[0], img_crop.shape[1]
-    mask = np.zeros((h, w, 3), np.uint8)
-    new_label.draw(mask, [255, 255, 255])
-    return img_crop, mask
+def crop_label(img, ann: sly.Annotation, padding):
+    h, w, _ = img.shape
+    label = ann.labels[0]
+    bbox: sly.Rectangle = label.geometry.to_bbox()
+
+    obj_h = bbox.bottom - bbox.top
+    obj_w = bbox.right - bbox.left
+
+    top_pad = int(obj_h * padding)
+    bottom_pad = int(obj_h * padding)
+    left_pad = int(obj_w * padding)
+    right_pad = int(obj_w * padding)
+    if bbox.top - top_pad < 0:
+        top_pad = bbox.top
+    if bbox.bottom + bottom_pad >= h:
+        bottom_pad = h - bbox.bottom - 1
+    if bbox.left - left_pad < 0:
+        left_pad = bbox.left
+    if bbox.right + right_pad >= w:
+        right_pad = w - bbox.right - 1
+
+    pad = min(top_pad, bottom_pad, left_pad, right_pad)
+    res_img, res_ann = sly.aug.crop(img, ann,
+                                    bbox.top - pad, bbox.left - pad,
+                                    h - (bbox.bottom + pad), w - (bbox.right + pad))
+    return res_img, res_ann
+
+
+# def get_label_foreground(img, label: sly.Label):
+#     bbox = label.geometry.to_bbox()
+#     img_crop = sly.image.crop(img, bbox)
+#     new_label = label.translate(drow=-bbox.top, dcol=-bbox.left)
+#     h, w = img_crop.shape[0], img_crop.shape[1]
+#     mask = np.zeros((h, w, 3), np.uint8)
+#     new_label.draw(mask, [255, 255, 255])
+#     return img_crop, mask
+
+
+def randomize_bg_color(img, mask):
+    color_img = create_blank(img.shape[0], img.shape[1], sly.color.random_rgb())
+    fg_h, fg_w, _ = mask.shape
+    fg = cv2.bitwise_and(img, mask)
+    bg_mask = 255 - mask
+    color_img[0:fg_h, 0:fg_w, :] = cv2.bitwise_and(color_img[0:fg_h, 0:fg_w, :], bg_mask) + fg
+    return color_img
+
+
+def create_blank(height, width, rgb_color=[0, 0, 0]):
+    """Create new image(numpy array) filled with certain color in RGB"""
+    # Create black blank image
+    image = np.zeros((height, width, 3), np.uint8)
+
+    # Since OpenCV uses BGR, convert the color first
+    color = tuple(reversed(rgb_color))
+    # Fill image with color
+    image[:] = color
+
+    return image
 
 
 def draw_white_mask(ann: sly.Annotation) -> np.ndarray:

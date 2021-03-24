@@ -54,9 +54,32 @@ def init_augs(state: dict):
     #print(json.dumps(d, indent=4))
 
 
+CNT_GRID_COLUMNS = 1
+empty_gallery = {
+    "content": {
+        "projectMeta": sly.ProjectMeta().to_json(),
+        "annotations": {},
+        "layout": [[] for i in range(CNT_GRID_COLUMNS)]
+    },
+    "previewOptions": {
+        "enableZoom": True,
+        "resizeOnZoom": True,
+        "showOpacityInHeader": True,
+    },
+    "options": {
+        "enableZoom": False,
+        "syncViews": False,
+        "showPreview": True,
+        "selectable": False,
+        "opacity": 0.1,
+        "showOpacityInHeader": True,
+    }
+}
+
+
 def init_preview(data, state):
     state["previewLoading"] = False
-
+    data["gallery"] = empty_gallery
 
 # def init_progress(data):
 #     data["progressPercentPreview"] = 0

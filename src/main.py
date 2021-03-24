@@ -1,15 +1,18 @@
 import os
 from collections import defaultdict
 import random
+import yaml
 import cv2
 import numpy as np
+import logging
 import supervisely_lib as sly
 
-from init_ui import init_input_project, init_settings, init_preview
+from init_ui import init_input_project, init_settings, init_preview, empty_gallery
+from synth_utils import crop_label, draw_white_mask, randomize_bg_color
 
 app: sly.AppService = sly.AppService()
 
-TEAMP_ID = int(os.environ['context.teamId'])
+TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
 
@@ -24,29 +27,9 @@ IMAGE_PATH = {} # image id -> local path
 PRODUCTS = defaultdict(lambda: defaultdict(list))  # tag name (i.e. product-id) -> image id -> list of labels
 
 # for debug
-vis_dir = "../images"
+vis_dir = os.path.join(app.data_dir, "vis_images")
 sly.fs.mkdir(vis_dir)
-sly.fs.clean_dir(vis_dir)
-
-# CNT_GRID_COLUMNS = 1
-# empty_gallery = {
-#     "content": {
-#         "projectMeta": sly.ProjectMeta().to_json(),
-#         "annotations": {},
-#         "layout": [[] for i in range(CNT_GRID_COLUMNS)]
-#     },
-#     "previewOptions": {
-#         "enableZoom": True,
-#         "resizeOnZoom": True
-#     },
-#     "options": {
-#         "enableZoom": False,
-#         "syncViews": False,
-#         "showPreview": True,
-#         "selectable": False,
-#         "opacity": 0.5
-#     }
-# }
+sly.fs.clean_dir(vis_dir)  # good for debug
 
 
 def validate_project_meta():
@@ -78,7 +61,7 @@ def cache_annotations(api: sly.Api, task_id, data):
 
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
-    sly.fs.clean_dir(cache_dir)
+    #sly.fs.clean_dir(cache_dir)
 
     num_images_with_products = 0
     num_product_examples = 0
@@ -105,9 +88,11 @@ def cache_annotations(api: sly.Api, task_id, data):
                     elif len(label.tags) > 1:
                         continue
                     num_image_products += 1
-                    # always one item in collection
+
+                    # always max one item in collection
                     for tag in label.tags:
-                        PRODUCTS[tag.name][image_id].append(label)
+                        ann_for_label = ann.clone(labels=[label])
+                        PRODUCTS[tag.name][image_id].append(ann_for_label)
 
                 if num_image_products == 0:
                     sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tagged products")
@@ -131,14 +116,13 @@ def cache_annotations(api: sly.Api, task_id, data):
                 progress_images = sly.Progress("Cache images", len(download_ids))
                 api.image.download_paths(dataset.id, download_ids, download_paths, progress_images.iters_done_report)
 
-    progress = sly.Progress("Preparing labels crops", num_product_examples)
-    for product_id, image_labels in PRODUCTS.items():
-        for image_id, labels in image_labels.items():
-            img_path = IMAGE_PATH[image_id]
-            img = sly.image.read(IMAGE_PATH[image_id])
-            for label in labels:
-                ann = sly.Annotation
-
+    # progress = sly.Progress("Preparing labels crops", num_product_examples)
+    # for product_id, image_labels in PRODUCTS.items():
+    #     for image_id, labels in image_labels.items():
+    #         img_path = IMAGE_PATH[image_id]
+    #         img = sly.image.read(IMAGE_PATH[image_id])
+    #         for label in labels:
+    #             ann = sly.Annotation
 
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
@@ -153,18 +137,56 @@ def cache_annotations(api: sly.Api, task_id, data):
 def preview(api: sly.Api, task_id, context, state, app_logger):
     product_id = random.choice(list(PRODUCTS.keys()))
     image_id = random.choice(list(PRODUCTS[product_id].keys()))
-    label = random.choice(list(PRODUCTS[product_id][image_id]))
-
     img = sly.image.read(IMAGE_PATH[image_id])
+
+    ann = random.choice(list(PRODUCTS[product_id][image_id]))
+
+    augs = yaml.safe_load(state["augs"])
+    pad_crop = augs['target'].get('padCrop', 0.2)
+    target_h = augs['target'].get('height', 200)
+
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
-        sly.image.write(os.path.join(vis_dir, "01_img.jpg"), img)
+        sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
 
-    label_image, label_mask = get_label_foreground(img, label)
+    label_image, ann = crop_label(img, ann, pad_crop)
+    label_image, ann = sly.aug.resize(label_image, ann, (target_h, -1))
+    label_mask = draw_white_mask(ann)
+    if augs['target']['background'] == "random_color":
+        label_image = randomize_bg_color(label_image, label_mask)
+
+    preview_local_path = os.path.join(vis_dir, "preview_image.png")
+    preview_remote_path = os.path.join(f"/synthetic-retail-products/{task_id}", "preview_image.png")
+
+    sly.image.write(preview_local_path, label_image)
+
+    preview_label = sly.Label(
+        sly.Bitmap(label_mask[:, :, 0].astype(np.bool), origin=sly.PointLocation(0, 0)),
+        ann.labels[0].obj_class
+    )
+
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
-        sly.image.write(os.path.join(vis_dir, "02_label_image.jpg"), label_image)
-        sly.image.write(os.path.join(vis_dir, "03_label_mask.jpg"), label_mask)
+        sly.image.write(os.path.join(vis_dir, "03_label_mask.png"), label_mask)
 
+    file_info = None
+    if api.file.exists(TEAM_ID, preview_remote_path):
+        api.file.remove(TEAM_ID, preview_remote_path)
+    file_info = api.file.upload(TEAM_ID, preview_local_path, preview_remote_path)
 
+    gallery = dict(empty_gallery)
+    gallery["content"]["projectMeta"] = META.to_json()
+    gallery["content"]["annotations"] = {
+        "preview": {
+            "url": file_info.full_storage_url,
+            "figures": [preview_label.to_json()]
+        }
+    }
+    gallery["content"]["layout"] = [["preview"]]
+
+    fields = [
+        {"field": "data.gallery", "payload": gallery},
+        {"field": "state.previewLoading", "payload": False},
+    ]
+    api.task.set_fields(task_id, fields)
 
     # ann = sly.Annotation.from_img_path
     # sly.aug.crop(img, sly.Annotation)
