@@ -31,16 +31,6 @@ def crop_label(img, ann: sly.Annotation, padding):
     return res_img, res_ann
 
 
-# def get_label_foreground(img, label: sly.Label):
-#     bbox = label.geometry.to_bbox()
-#     img_crop = sly.image.crop(img, bbox)
-#     new_label = label.translate(drow=-bbox.top, dcol=-bbox.left)
-#     h, w = img_crop.shape[0], img_crop.shape[1]
-#     mask = np.zeros((h, w, 3), np.uint8)
-#     new_label.draw(mask, [255, 255, 255])
-#     return img_crop, mask
-
-
 def randomize_bg_color(img, mask):
     color_img = create_blank(img.shape[0], img.shape[1], sly.color.random_rgb())
     fg_h, fg_w, _ = mask.shape
@@ -70,8 +60,8 @@ def draw_white_mask(ann: sly.Annotation) -> np.ndarray:
     return mask
 
 
-def crop_rb(y, x, original_h, original_w, image, ann):
-    mask = draw_white_mask(ann)
+def crop_rb(y, x, original_h, original_w, image, mask):
+    #mask = draw_white_mask(ann)
     h, w, _ = image.shape
     image_rb = image[max(0, h - y): h, max(0, w - x): w, :]
     mask_rb = mask[max(0, h - y): h, max(0, w - x): w, :]
@@ -86,9 +76,9 @@ def place_lt(y, x, main_image, main_mask, image, mask):
     main_mask[y - sec_h:y, x - sec_w:x, :] -= cv2.bitwise_and(main_mask[y - sec_h:y, x - sec_w:x, :], mask)
 
 
-def crop_lb(y, x, original_h, original_w, image, ann):
+def crop_lb(y, x, original_h, original_w, image, mask):
     h, w, _ = image.shape
-    mask = draw_white_mask(ann)
+    #mask = draw_white_mask(ann)
     image = image[max(0, h - y): h, 0: min(w, original_w - x), :]
     mask = mask[max(0, h - y): h, 0: min(w, original_w - x), :]
     return image, mask
@@ -105,9 +95,9 @@ def place_rt(y, x, main_image, main_mask, image, mask):
     main_mask[y-sec_h:y, x:x+sec_w, :] -= cv2.bitwise_and(main_mask[y-sec_h:y, x:x+sec_w, :], mask) #mask
 
 
-def crop_rt(y, x, original_h, original_w, image, ann):
+def crop_rt(y, x, original_h, original_w, image, mask):
     h, w, _ = image.shape
-    mask = draw_white_mask(ann)
+    #mask = draw_white_mask(ann)
 
     image = image[0: min(h, original_h - y), max(0, w - x): w, :]
     mask = mask[0: min(h, original_h - y), max(0, w - x): w, :]
@@ -125,9 +115,9 @@ def place_lb(y, x, main_image, main_mask, image, mask):
     main_mask[y:y+sec_h, x-sec_w:x, :] -= cv2.bitwise_and(main_mask[y:y+sec_h, x-sec_w:x, :], mask) #mask
 
 
-def crop_lt(y, x, original_h, original_w, image, ann):
+def crop_lt(y, x, original_h, original_w, image, mask):
     h, w, _ = image.shape
-    mask = draw_white_mask(ann)
+    #mask = draw_white_mask(ann)
 
     image = image[0: min(h, original_h - y), 0: min(w, original_w - x)]
     mask = mask[0: min(h, original_h - y), 0: min(w, original_w - x)]

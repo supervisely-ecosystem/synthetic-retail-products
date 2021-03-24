@@ -160,15 +160,17 @@ def get_random_product(ignore_id=None):
     return product_id, img, ann
 
 
-def preprocess_product(img, ann, augs, is_main):
-    target_h = augs['target']['height']
+def preprocess_product(img, ann, augs_settings, is_main):
+    target_h = augs_settings['target']['height']
     pad_crop = 0
     if is_main is True:
-        pad_crop = augs['target']['padCrop']
+        pad_crop = augs_settings['target']['padCrop']
     label_image, ann = crop_label(img, ann, pad_crop)
     label_image, ann = sly.aug.resize(label_image, ann, (target_h, -1))
     label_mask = draw_white_mask(ann)
-    if is_main is True and augs['target']['background'] == "random_color":
+    if is_main:
+        label_image, label_mask = augs.apply_to_foreground(label_image, label_mask)
+    if is_main is True and augs_settings['target']['background'] == "random_color":
         label_image = randomize_bg_color(label_image, label_mask)
     return label_image, label_mask
 
@@ -188,19 +190,23 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
         sly.image.write(os.path.join(vis_dir, "02_label_image.png"), label_image)
         sly.image.write(os.path.join(vis_dir, "03_label_mask.png"), label_mask)
 
-    label_image, label_mask = augs.apply_to_foreground(label_image, label_mask)
-
     orig_h, orig_w = label_image.shape[:2]
     for crop_f, place_f, range_index in zip(crops_funcs, place_funcs, list(range(0, 4))):
         if random.uniform(0, 1) <= augs_settings['noise']['corner_probability']:
             _, noise_img, noise_ann = get_random_product(ignore_id=product_id)
             noise_img, noise_ann = crop_label(noise_img, noise_ann, padding=0)
-            sly.image.write(os.path.join(vis_dir, "04_noise_img.png"), noise_img)
+            noise_mask = draw_white_mask(noise_ann)
+            if logging.getLevelName(sly.logger.level) == 'DEBUG':
+                sly.image.write(os.path.join(vis_dir, "04_noise_img.png"), noise_img)
+            if random.uniform(0, 1) <= augs_settings['noise']['aug_probability']:
+                noise_img, noise_mask = augs.apply_to_foreground(noise_img, noise_mask)
+
             y_range = get_y_range(range_index, orig_h)
             x_range = get_x_range(range_index, orig_w)
             y = random.randint(int(y_range[0]), int(y_range[1]))
             x = random.randint(int(x_range[0]), int(x_range[1]))
-            noise_img, noise_mask = crop_f(y, x, orig_h, orig_w, noise_img, noise_ann)
+            noise_img, noise_mask = crop_f(y, x, orig_h, orig_w, noise_img, noise_mask)
+
             if logging.getLevelName(sly.logger.level) == 'DEBUG':
                 sly.image.write(os.path.join(vis_dir, f"04_noise_img_{range_index}.png"), noise_img)
                 sly.image.write(os.path.join(vis_dir, f"05_noise_mask_{range_index}.png"), noise_mask)

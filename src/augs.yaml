@@ -9,18 +9,22 @@ target:
   padCrop: 0.1
 
   # height of the result image (pixels)
-  height: 200
+  height: 350
   color:
     RandomBrightnessContrast: true
     CLAHE: true
-    Blur: true
+    Blur:
+      p: 0.3 # probability
+      blur_limit: 5
   spacial:
-    Rotate: (-25, 25)
+    Rotate: (-20, 20)
     ElasticTransformation:
-      alpha: (0, 40)
-      sigma: (4, 8)
+      alpha: (50, 200)
+      sigma: (10, 20)
 
 noise:
+  # probability that noise object will be augmented
+  aug_probability: 0.5
   # probability that noise will be added at every corner
   corner_probability: 0.9
   # how noise object will cover height or width

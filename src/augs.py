@@ -97,24 +97,33 @@ name_func_spacial = {
 
 
 def init_fg_augs(settings):
-    init_color_augs(settings['target']['color'])
-    init_spacial_augs(settings['target']['spacial'])
+    init_color_augs(settings['target'].get('color'))
+    init_spacial_augs(settings['target'].get('spacial'))
 
 
 def init_color_augs(data):
     global aug_color_fg
     augs = []
+    if data is None:
+        data = {}
     for key, value in data.items():
-        for key, value in data.items():
-            if key not in name_func_color:
-                sly.logger.warn(f"Aug {key} not found, skipped")
-                continue
-        augs.append(name_func_color[key]())
+        if key not in name_func_color:
+            sly.logger.warn(f"Aug {key} not found, skipped")
+            continue
+        if key == 'Blur':
+            p = value['p']
+            blur_limit = value['blur_limit']
+            augs.append(A.Blur(blur_limit=blur_limit, p=p))
+        else:
+            augs.append(name_func_color[key]())
     aug_color_fg = A.Compose(augs)
 
 
 def init_spacial_augs(data):
     global aug_spacial_fg
+    if data is None:
+        aug_spacial_fg = iaa.Sequential([], random_order=True)
+        return
     augs = []
     for key, value in data.items():
         if key == 'ElasticTransformation':
