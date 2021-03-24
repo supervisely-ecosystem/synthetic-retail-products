@@ -188,34 +188,6 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
     ]
     api.task.set_fields(task_id, fields)
 
-    # ann = sly.Annotation.from_img_path
-    # sly.aug.crop(img, sly.Annotation)
-
-    # src_img_path = os.path.join(cache_dir, "res.png")
-    # dst_img_path = os.path.join(f"/flying_object/{task_id}", "res.png")
-    # sly.image.write(src_img_path, img)
-    #
-    # file_info = None
-    # if api.file.exists(team_id, dst_img_path):
-    #     api.file.remove(team_id, dst_img_path)
-    # file_info = api.file.upload(team_id, src_img_path, dst_img_path)
-    #
-    # gallery = dict(empty_gallery)
-    # gallery["content"]["projectMeta"] = res_meta.to_json()
-    # gallery["content"]["annotations"] = {
-    #     "preview": {
-    #         "url": file_info.full_storage_url,
-    #         "figures": [label.to_json() for label in ann.labels]
-    #     }
-    # }
-    # gallery["content"]["layout"] = [["preview"]]
-    #
-    # fields = [
-    #     {"field": "data.gallery", "payload": gallery},
-    #     {"field": "state.previewLoading", "payload": False},
-    # ]
-    # api.task.set_fields(task_id, fields)
-
 
 @app.callback("generate")
 @sly.timeit
@@ -236,7 +208,7 @@ def main():
 
     app.run(data=data, state=state)
 
-#@TODO: remove noise from image
+
 #@TODO: README: it is allowed to label several product examples on a single image
 #@TODO: README: target background color vs original
 #@TODO: motion blur + other augs
