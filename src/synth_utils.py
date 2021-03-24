@@ -83,7 +83,7 @@ def place_lt(y, x, main_image, main_mask, image, mask):
     secondary_object = cv2.bitwise_and(image, mask)
     secondary_bg = 255 - mask
     main_image[y - sec_h:y, x - sec_w:x, :] = cv2.bitwise_and(main_image[y - sec_h:y, x - sec_w:x, :], secondary_bg) + secondary_object
-    main_mask[y - sec_h:y, x - sec_w:x, :] -= mask
+    main_mask[y - sec_h:y, x - sec_w:x, :] -= cv2.bitwise_and(main_mask[y - sec_h:y, x - sec_w:x, :], mask)
 
 
 def crop_lb(y, x, original_h, original_w, image, ann):
@@ -102,7 +102,7 @@ def place_rt(y, x, main_image, main_mask, image, mask):
     secondary_bg = 255 - mask
 
     main_image[y-sec_h:y, x:x+sec_w, :] = cv2.bitwise_and(main_image[y-sec_h:y, x:x+sec_w, :], secondary_bg) + secondary_object
-    main_mask[y-sec_h:y, x:x+sec_w, :] -= mask
+    main_mask[y-sec_h:y, x:x+sec_w, :] -= cv2.bitwise_and(main_mask[y-sec_h:y, x:x+sec_w, :], mask) #mask
 
 
 def crop_rt(y, x, original_h, original_w, image, ann):
@@ -122,7 +122,7 @@ def place_lb(y, x, main_image, main_mask, image, mask):
     secondary_bg = 255 - mask
 
     main_image[y:y+sec_h, x-sec_w:x, :] = cv2.bitwise_and(main_image[y:y+sec_h, x-sec_w:x, :], secondary_bg) + secondary_object
-    main_mask[y:y+sec_h, x-sec_w:x, :] -= mask
+    main_mask[y:y+sec_h, x-sec_w:x, :] -= cv2.bitwise_and(main_mask[y:y+sec_h, x-sec_w:x, :], mask) #mask
 
 
 def crop_lt(y, x, original_h, original_w, image, ann):
@@ -142,7 +142,7 @@ def place_rb(y, x, main_image, main_mask, image, mask):
     secondary_bg = 255 - mask
 
     main_image[y: y+sec_h, x: x+sec_w, :] = cv2.bitwise_and(main_image[y: y+sec_h, x: x+sec_w, :], secondary_bg) + secondary_object
-    main_mask[y: y+sec_h, x: x+sec_w, :] -= mask
+    main_mask[y: y+sec_h, x: x+sec_w, :] -= cv2.bitwise_and(main_mask[y: y+sec_h, x: x+sec_w, :], mask) #mask
 
 
 crops_funcs = [crop_rb,  crop_lb,  crop_rt,  crop_lt]

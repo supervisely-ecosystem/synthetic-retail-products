@@ -9,6 +9,7 @@ import supervisely_lib as sly
 
 from init_ui import init_input_project, init_settings, init_preview, empty_gallery
 from synth_utils import crop_label, draw_white_mask, randomize_bg_color
+from synth_utils import crops_funcs, place_funcs, get_y_range, get_x_range
 
 app: sly.AppService = sly.AppService()
 
@@ -116,14 +117,6 @@ def cache_annotations(api: sly.Api, task_id, data):
                 progress_images = sly.Progress("Cache images", len(download_ids))
                 api.image.download_paths(dataset.id, download_ids, download_paths, progress_images.iters_done_report)
 
-    # progress = sly.Progress("Preparing labels crops", num_product_examples)
-    # for product_id, image_labels in PRODUCTS.items():
-    #     for image_id, labels in image_labels.items():
-    #         img_path = IMAGE_PATH[image_id]
-    #         img = sly.image.read(IMAGE_PATH[image_id])
-    #         for label in labels:
-    #             ann = sly.Annotation
-
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
 
@@ -132,27 +125,81 @@ def cache_annotations(api: sly.Api, task_id, data):
     data["examplesCount"] = num_product_examples
 
 
-@app.callback("preview")
-@sly.timeit
-def preview(api: sly.Api, task_id, context, state, app_logger):
+def generate_item(orig_image, orig_mask, orig_upc, all_upcs, orig_h, orig_w):
+    # image = orig_image.copy()
+    # mask = orig_mask.copy()
+    image, mask = aug.augment_main(orig_image.copy(), orig_mask.copy())
+    for crop_f, place_f, range_index in zip(crops_funcs, place_funcs, list(range(0, 4))):
+        upc = random.choice(all_upcs)
+        while upc == orig_upc:
+            upc = random.choice(all_upcs)
+        sec_example = random.choice(products[upc])
+        try:
+            sec_image = sec_example["img"].copy()
+            sec_image, sec_ann = sly.aug.resize(sec_image, sec_example["ann"], (orig_h, -1))
+
+            y_range = get_y_range(range_index, orig_h)
+            x_range = get_x_range(range_index, orig_w)
+            y = random.randint(int(y_range[0]), int(y_range[1]))
+            x = random.randint(int(x_range[0]), int(x_range[1]))
+            sec_image, sec_mask = crop_f(y, x, orig_h, orig_w, sec_image, sec_ann)
+            place_f(y, x, image, mask, sec_image, sec_mask)
+        except Exception as e:
+            raise e
+    return image, mask
+
+
+def get_random_product(ignore_id=None):
     product_id = random.choice(list(PRODUCTS.keys()))
+    while ignore_id is not None and product_id == ignore_id:
+        product_id = random.choice(list(PRODUCTS.keys()))
     image_id = random.choice(list(PRODUCTS[product_id].keys()))
     img = sly.image.read(IMAGE_PATH[image_id])
-
     ann = random.choice(list(PRODUCTS[product_id][image_id]))
+    return product_id, img, ann
 
-    augs = yaml.safe_load(state["augs"])
-    pad_crop = augs['target']['padCrop']
+
+def preprocess_product(img, ann, augs, is_main):
     target_h = augs['target']['height']
-
-    if logging.getLevelName(sly.logger.level) == 'DEBUG':
-        sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
-
+    pad_crop = 0
+    if is_main is True:
+        pad_crop = augs['target']['padCrop']
     label_image, ann = crop_label(img, ann, pad_crop)
     label_image, ann = sly.aug.resize(label_image, ann, (target_h, -1))
     label_mask = draw_white_mask(ann)
-    if augs['target']['background'] == "random_color":
+    if is_main is True and augs['target']['background'] == "random_color":
         label_image = randomize_bg_color(label_image, label_mask)
+    return label_image, label_mask
+
+
+@app.callback("preview")
+@sly.timeit
+def preview(api: sly.Api, task_id, context, state, app_logger):
+    product_id, img, ann = get_random_product()
+    if logging.getLevelName(sly.logger.level) == 'DEBUG':
+        sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
+
+    augs = yaml.safe_load(state["augs"])
+    label_image, label_mask = preprocess_product(img, ann, augs, is_main=True)
+    if logging.getLevelName(sly.logger.level) == 'DEBUG':
+        sly.image.write(os.path.join(vis_dir, "02_label_image.png"), label_image)
+        sly.image.write(os.path.join(vis_dir, "03_label_mask.png"), label_mask)
+
+    orig_h, orig_w = label_image.shape[:2]
+    for crop_f, place_f, range_index in zip(crops_funcs, place_funcs, list(range(0, 4))):
+        if random.uniform(0, 1) <= augs['noise']['corner_probability']:
+            _, noise_img, noise_ann = get_random_product(ignore_id=product_id)
+            noise_img, noise_ann = crop_label(noise_img, noise_ann, padding=0)
+            sly.image.write(os.path.join(vis_dir, "04_noise_img.png"), noise_img)
+            y_range = get_y_range(range_index, orig_h)
+            x_range = get_x_range(range_index, orig_w)
+            y = random.randint(int(y_range[0]), int(y_range[1]))
+            x = random.randint(int(x_range[0]), int(x_range[1]))
+            noise_img, noise_mask = crop_f(y, x, orig_h, orig_w, noise_img, noise_ann)
+            if logging.getLevelName(sly.logger.level) == 'DEBUG':
+                sly.image.write(os.path.join(vis_dir, f"04_noise_img_{range_index}.png"), noise_img)
+                sly.image.write(os.path.join(vis_dir, f"05_noise_mask_{range_index}.png"), noise_mask)
+            place_f(y, x, label_image, label_mask, noise_img, noise_mask)
 
     preview_local_path = os.path.join(vis_dir, "preview_image.png")
     preview_remote_path = os.path.join(f"/synthetic-retail-products/{task_id}", "preview_image.png")
@@ -165,9 +212,8 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
     )
 
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
-        sly.image.write(os.path.join(vis_dir, "03_label_mask.png"), label_mask)
+        sly.image.write(os.path.join(vis_dir, "06_final_mask.png"), label_mask)
 
-    file_info = None
     if api.file.exists(TEAM_ID, preview_remote_path):
         api.file.remove(TEAM_ID, preview_remote_path)
     file_info = api.file.upload(TEAM_ID, preview_local_path, preview_remote_path)

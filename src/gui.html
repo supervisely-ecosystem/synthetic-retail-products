@@ -41,9 +41,10 @@
                 </el-button>
             </div>
             <sly-grid-gallery
-                    v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"
-                    :content="data.gallery.content"
-                    :options="data.gallery.options"/>
+                v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"
+                :content="data.gallery.content"
+                :options="data.gallery.options"
+                :preview-options="data.gallery.previewOptions"/>
             <div v-show="Object.keys(data.gallery.content.annotations).length === 0 && !state.previewLoading">
                 Gallery is empty, press Preview button to visualize examples
             </div>

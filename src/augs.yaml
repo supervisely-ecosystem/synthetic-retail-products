@@ -21,5 +21,8 @@ target:
       sigma: (4, 8)
 
 noise:
-  occlusion_height: 0.75
-  occlusion_width: 0.75
+  # probability that noise will be added at every corner
+  corner_probability: 0.7
+  # how noise object will cover height or width
+  max_occlusion_height: 0.75
+  max_occlusion_width: 0.75
