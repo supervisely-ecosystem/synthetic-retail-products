@@ -308,8 +308,7 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
             new_image_ids = [image_info.id for image_info in new_images]
             api.annotation.upload_anns(new_image_ids, final_anns)
             progress.iters_done_report(len(batch))
-            if progress.need_report():
-                refresh_progress(api, task_id, progress)
+            refresh_progress(api, task_id, progress)
     refresh_progress(api, task_id, progress)
     res_project = api.project.get_info_by_id(res_project.id)
     fields = [
