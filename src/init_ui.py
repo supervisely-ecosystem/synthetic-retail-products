@@ -66,8 +66,8 @@ def refresh_progress(api: sly.Api, task_id, progress: sly.Progress):
 
 
 def init_output(data, state):
-    state["trainCount"] = 200
-    state["valCount"] = 20
+    state["trainCount"] = 100
+    state["valCount"] = 10
     state["outputProjectName"] = "synthetic products"
     data["progressPercent"] = 0
     data["progressCurrent"] = 0

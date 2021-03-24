@@ -323,7 +323,7 @@ def main():
     state = {}
 
     init_input_project(app.public_api, data, PROJECT_INFO)
-    init_augs(data, state)
+    init_augs(state)
     init_preview(data, state)
     init_output(data, state)
     init_res_project(data, state)
