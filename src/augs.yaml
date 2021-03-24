@@ -9,7 +9,7 @@ target:
   padCrop: 0.2
 
   # height of the result image (pixels)
-  height: 200
+  height: 512
   color:
     RandomBrightnessContrast: true
     CLAHE: true
