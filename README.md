@@ -42,6 +42,8 @@ App generates synthetic data for classification and segmentation tasks. This dat
    
 6. New project with synthetic data will be created, app will be closed automatically. For every product in  labeled catalog will be created a separate dataset, synthetic images have object mask, tag of the product (i.e. product id), and `train` or `val` tag (defines if the image is in training or validation set).
 
+<img src="https://i.imgur.com/GymxBvj.png"/>
+
 
 **Watch demo video**:
 
@@ -52,4 +54,4 @@ App generates synthetic data for classification and segmentation tasks. This dat
 
 # Screenshots
 
-<img src="https://i.imgur.com/izY9tR7.png"/>
+<img src="https://i.imgur.com/PD2002R.png"/>
