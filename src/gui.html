@@ -21,11 +21,6 @@
                 title="Settings"
                 subtitle="Configure synthetic data generation"
         >
-            <sly-field title="Product class"
-                       description="Select class of the labeled products">
-                <sly-select-class :project-id="data.projectId" :classes.sync="state.class"
-                                  :options="data.classOptions"></sly-select-class>
-            </sly-field>
             <sly-field title="Augmentations"
                        description="">
                 <sly-editor v-model="state.augs" :options="{height: '300px', mode: 'ace/mode/yaml'}"></sly-editor>
@@ -56,7 +51,6 @@
                 <el-button
                         type="primary"
                         @click="state.previewLoading = true; command('preview')"
-                        :disabled="!state.class"
                         :loading="state.previewLoading"
                 >
                     <i class="zmdi zmdi-slideshow" style="margin-right: 5px"></i> Preview

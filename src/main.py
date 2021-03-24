@@ -156,7 +156,15 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
     label = random.choice(list(PRODUCTS[product_id][image_id]))
 
     img = sly.image.read(IMAGE_PATH[image_id])
-    sly.image.write(os.path.join(vis_dir, "img.jpg"), img)
+    if logging.getLevelName(sly.logger.level) == 'DEBUG':
+        sly.image.write(os.path.join(vis_dir, "01_img.jpg"), img)
+
+    label_image, label_mask = get_label_foreground(img, label)
+    if logging.getLevelName(sly.logger.level) == 'DEBUG':
+        sly.image.write(os.path.join(vis_dir, "02_label_image.jpg"), label_image)
+        sly.image.write(os.path.join(vis_dir, "03_label_mask.jpg"), label_mask)
+
+
 
     # ann = sly.Annotation.from_img_path
     # sly.aug.crop(img, sly.Annotation)

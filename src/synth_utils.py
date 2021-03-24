@@ -3,6 +3,16 @@ import cv2
 import supervisely_lib as sly
 
 
+def get_label_foreground(img, label: sly.Label):
+    bbox = label.geometry.to_bbox()
+    img_crop = sly.image.crop(img, bbox)
+    new_label = label.translate(drow=-bbox.top, dcol=-bbox.left)
+    h, w = img_crop.shape[0], img_crop.shape[1]
+    mask = np.zeros((h, w, 3), np.uint8)
+    new_label.draw(mask, [255, 255, 255])
+    return img_crop, mask
+
+
 def draw_white_mask(ann: sly.Annotation) -> np.ndarray:
     h, w = ann.img_size
     mask = np.zeros((h, w, 3), np.uint8)

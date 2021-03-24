@@ -33,11 +33,11 @@ def init_input_project(api: sly.Api, data: dict, project_info):
 #     state["classes"] = len(classes_json) * [True]
 
 def init_settings(data, state):
-    state["class"] = None
-    data["classOptions"] = {
-        "showLabel": False,
-        "availableShapes": ["polygon", "bitmap"]
-    }
+    # state["class"] = None
+    # data["classOptions"] = {
+    #     "showLabel": False,
+    #     "availableShapes": ["polygon", "bitmap"]
+    # }
     init_augs(state)
     state["trainCount"] = 20  #@TODO: 200
     state["valCount"] = 2  #@TODO: 20
