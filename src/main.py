@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import logging
 import supervisely_lib as sly
+import augs
 
 from init_ui import init_input_project, init_settings, init_preview, empty_gallery
 from synth_utils import crop_label, draw_white_mask, randomize_bg_color
@@ -179,15 +180,19 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
 
-    augs = yaml.safe_load(state["augs"])
-    label_image, label_mask = preprocess_product(img, ann, augs, is_main=True)
+    augs_settings = yaml.safe_load(state["augs"])
+    augs.init_fg_augs(augs_settings)
+
+    label_image, label_mask = preprocess_product(img, ann, augs_settings, is_main=True)
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "02_label_image.png"), label_image)
         sly.image.write(os.path.join(vis_dir, "03_label_mask.png"), label_mask)
 
+    label_image, label_mask = augs.apply_to_foreground(label_image, label_mask)
+
     orig_h, orig_w = label_image.shape[:2]
     for crop_f, place_f, range_index in zip(crops_funcs, place_funcs, list(range(0, 4))):
-        if random.uniform(0, 1) <= augs['noise']['corner_probability']:
+        if random.uniform(0, 1) <= augs_settings['noise']['corner_probability']:
             _, noise_img, noise_ann = get_random_product(ignore_id=product_id)
             noise_img, noise_ann = crop_label(noise_img, noise_ann, padding=0)
             sly.image.write(os.path.join(vis_dir, "04_noise_img.png"), noise_img)
