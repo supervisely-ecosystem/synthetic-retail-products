@@ -17,7 +17,7 @@ target:
       p: 0.3 # probability
       blur_limit: 5
   spacial:
-    Rotate: (-20, 20)
+    Rotate: (-15, 15)
     ElasticTransformation:
       alpha: (50, 200)
       sigma: (10, 20)
