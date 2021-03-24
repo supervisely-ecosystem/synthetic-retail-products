@@ -26,7 +26,6 @@ def init_settings(data, state):
     state["valCount"] = 2  #@TODO: 20
 
 
-
 def init_augs(state: dict):
     root_source_path = str(Path(sys.argv[0]).parents[0])
     with open(os.path.join(root_source_path, "augs.yaml"), 'r') as file:
@@ -37,7 +36,7 @@ def init_augs(state: dict):
     #print(json.dumps(d, indent=4))
 
 
-CNT_GRID_COLUMNS = 1
+CNT_GRID_COLUMNS = 2
 empty_gallery = {
     "content": {
         "projectMeta": sly.ProjectMeta().to_json(),
@@ -57,7 +56,7 @@ empty_gallery = {
         "selectable": False,
         "opacity": 0.1,
         "showOpacityInHeader": True,
-        "viewHeight": 450
+        # "viewHeight": 450
     }
 }
 
@@ -65,6 +64,7 @@ empty_gallery = {
 def init_preview(data, state):
     state["previewLoading"] = False
     data["gallery"] = empty_gallery
+    state["previewCount"] = 4
 
 # def init_progress(data):
 #     data["progressPercentPreview"] = 0

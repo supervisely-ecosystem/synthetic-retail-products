@@ -32,19 +32,22 @@
                 subtitle="Preview synthetic image and labels"
         >
             <div slot="header">
-                <el-button
-                        type="primary"
-                        @click="state.previewLoading = true; command('preview')"
-                        :loading="state.previewLoading"
-                >
-                    <i class="zmdi zmdi-slideshow" style="margin-right: 5px"></i> Preview
-                </el-button>
+                <div class="fflex">
+                    <el-input-number class="mr10" v-model="state.previewCount" :min="1" :max="20" size="small"></el-input-number>
+                    <el-button
+                            type="primary"
+                            @click="state.previewLoading = true; command('preview')"
+                            :loading="state.previewLoading"
+                    >
+                        <i class="zmdi zmdi-slideshow" style="margin-right: 5px"></i> Preview
+                    </el-button>
+                </div>
             </div>
             <sly-grid-gallery
-                v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"
-                :content="data.gallery.content"
-                :options="data.gallery.options"
-                :preview-options="data.gallery.previewOptions"/>
+                    v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"
+                    :content="data.gallery.content"
+                    :options="data.gallery.options"
+                    :preview-options="data.gallery.previewOptions"/>
             <div v-show="Object.keys(data.gallery.content.annotations).length === 0 && !state.previewLoading">
                 Gallery is empty, press Preview button to visualize examples
             </div>

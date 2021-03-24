@@ -8,7 +8,7 @@ import logging
 import supervisely_lib as sly
 import augs
 
-from init_ui import init_input_project, init_settings, init_preview, empty_gallery
+from init_ui import init_input_project, init_settings, init_preview, empty_gallery, CNT_GRID_COLUMNS
 from synth_utils import crop_label, draw_white_mask, randomize_bg_color
 from synth_utils import crops_funcs, place_funcs, get_y_range, get_x_range
 
@@ -126,30 +126,6 @@ def cache_annotations(api: sly.Api, task_id, data):
     data["examplesCount"] = num_product_examples
 
 
-def generate_item(orig_image, orig_mask, orig_upc, all_upcs, orig_h, orig_w):
-    # image = orig_image.copy()
-    # mask = orig_mask.copy()
-    image, mask = aug.augment_main(orig_image.copy(), orig_mask.copy())
-    for crop_f, place_f, range_index in zip(crops_funcs, place_funcs, list(range(0, 4))):
-        upc = random.choice(all_upcs)
-        while upc == orig_upc:
-            upc = random.choice(all_upcs)
-        sec_example = random.choice(products[upc])
-        try:
-            sec_image = sec_example["img"].copy()
-            sec_image, sec_ann = sly.aug.resize(sec_image, sec_example["ann"], (orig_h, -1))
-
-            y_range = get_y_range(range_index, orig_h)
-            x_range = get_x_range(range_index, orig_w)
-            y = random.randint(int(y_range[0]), int(y_range[1]))
-            x = random.randint(int(x_range[0]), int(x_range[1]))
-            sec_image, sec_mask = crop_f(y, x, orig_h, orig_w, sec_image, sec_ann)
-            place_f(y, x, image, mask, sec_image, sec_mask)
-        except Exception as e:
-            raise e
-    return image, mask
-
-
 def get_random_product(ignore_id=None):
     product_id = random.choice(list(PRODUCTS.keys()))
     while ignore_id is not None and product_id == ignore_id:
@@ -175,15 +151,10 @@ def preprocess_product(img, ann, augs_settings, is_main):
     return label_image, label_mask
 
 
-@app.callback("preview")
-@sly.timeit
-def preview(api: sly.Api, task_id, context, state, app_logger):
+def generate_example(augs_settings, augs=None, preview=True):
     product_id, img, ann = get_random_product()
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
-
-    augs_settings = yaml.safe_load(state["augs"])
-    augs.init_fg_augs(augs_settings)
 
     label_image, label_mask = preprocess_product(img, ann, augs_settings, is_main=True)
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
@@ -212,32 +183,56 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
                 sly.image.write(os.path.join(vis_dir, f"05_noise_mask_{range_index}.png"), noise_mask)
             place_f(y, x, label_image, label_mask, noise_img, noise_mask)
 
-    preview_local_path = os.path.join(vis_dir, "preview_image.png")
-    preview_remote_path = os.path.join(f"/synthetic-retail-products/{task_id}", "preview_image.png")
-
-    sly.image.write(preview_local_path, label_image)
-
-    preview_label = sly.Label(
-        sly.Bitmap(label_mask[:, :, 0].astype(np.bool), origin=sly.PointLocation(0, 0)),
-        ann.labels[0].obj_class
-    )
-
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "06_final_mask.png"), label_mask)
 
-    if api.file.exists(TEAM_ID, preview_remote_path):
-        api.file.remove(TEAM_ID, preview_remote_path)
-    file_info = api.file.upload(TEAM_ID, preview_local_path, preview_remote_path)
+    label_preview = None
+    if preview is True:
+        label_preview = sly.Label(
+            sly.Bitmap(label_mask[:, :, 0].astype(bool), origin=sly.PointLocation(0, 0)),
+            ann.labels[0].obj_class
+        )
+
+    return label_image, label_mask, label_preview
+
+
+@app.callback("preview")
+@sly.timeit
+def preview(api: sly.Api, task_id, context, state, app_logger):
+    count = state["previewCount"]
+    augs_settings = yaml.safe_load(state["augs"])
+    augs.init_fg_augs(augs_settings)
+
+    preview_labels = []
+    preview_images = []
+
+    for i in range(count):
+        label_image, label_mask, label_preview = generate_example(augs_settings, augs, True)
+
+        preview_local_path = os.path.join(vis_dir, f"preview_image_{i}.png")
+        preview_remote_path = os.path.join(f"/synthetic-retail-products/{task_id}", f"preview_image_{i}.png")
+
+        sly.image.write(preview_local_path, label_image)
+
+        if api.file.exists(TEAM_ID, preview_remote_path):
+            api.file.remove(TEAM_ID, preview_remote_path)
+        file_info = api.file.upload(TEAM_ID, preview_local_path, preview_remote_path)
+
+        preview_labels.append(label_preview)
+        preview_images.append(file_info.full_storage_url)
 
     gallery = dict(empty_gallery)
     gallery["content"]["projectMeta"] = META.to_json()
-    gallery["content"]["annotations"] = {
-        "preview": {
-            "url": file_info.full_storage_url,
-            "figures": [preview_label.to_json()]
+    grid_annotations = {}
+    grid_layout = [[] for i in range(CNT_GRID_COLUMNS)]
+    for idx, (image_url, label) in enumerate(zip(preview_images, preview_labels)):
+        grid_annotations[str(idx)] = {
+            "url": image_url,
+            "figures": [label.to_json()]
         }
-    }
-    gallery["content"]["layout"] = [["preview"]]
+        grid_layout[idx % CNT_GRID_COLUMNS].append(str(idx))
+    gallery["content"]["layout"] = grid_layout
+    gallery["content"]["annotations"] = grid_annotations
 
     fields = [
         {"field": "data.gallery", "payload": gallery},
