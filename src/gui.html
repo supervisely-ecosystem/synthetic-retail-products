@@ -41,7 +41,6 @@
                 </el-button>
             </div>
             <sly-grid-gallery
-                    style="max-width: 200px; max-height: 250px;"
                     v-show="Object.keys(data.gallery.content.annotations).length > 0 && !state.previewLoading"
                     :content="data.gallery.content"
                     :options="data.gallery.options"/>

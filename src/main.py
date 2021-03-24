@@ -142,8 +142,8 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
     ann = random.choice(list(PRODUCTS[product_id][image_id]))
 
     augs = yaml.safe_load(state["augs"])
-    pad_crop = augs['target'].get('padCrop', 0.2)
-    target_h = augs['target'].get('height', 200)
+    pad_crop = augs['target']['padCrop']
+    target_h = augs['target']['height']
 
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "01_img.png"), img)
@@ -209,6 +209,7 @@ def main():
     app.run(data=data, state=state)
 
 
+#@TODO: set max height like in preview
 #@TODO: README: it is allowed to label several product examples on a single image
 #@TODO: README: target background color vs original
 #@TODO: motion blur + other augs
