@@ -183,8 +183,8 @@ def generate_example(augs_settings, augs=None, preview=True, product_id=None, im
             if random.uniform(0, 1) <= augs_settings['noise']['aug_probability']:
                 noise_img, noise_mask = augs.apply_to_foreground(noise_img, noise_mask)
 
-            y_range = get_y_range(range_index, orig_h)
-            x_range = get_x_range(range_index, orig_w)
+            y_range = get_y_range(range_index, orig_h, portion=augs_settings["noise"]["max_occlusion_height"])
+            x_range = get_x_range(range_index, orig_w, portion=augs_settings["noise"]["max_occlusion_width"])
             y = random.randint(int(y_range[0]), int(y_range[1]))
             x = random.randint(int(x_range[0]), int(x_range[1]))
             noise_img, noise_mask = crop_f(y, x, orig_h, orig_w, noise_img, noise_mask)
@@ -338,7 +338,6 @@ def main():
 
     app.run(data=data, state=state)
 
-#@TODO: README: it is allowed to label several product examples on a single image
-#@TODO: README: target background color vs original
+
 if __name__ == "__main__":
     sly.main_wrapper("main", main)
