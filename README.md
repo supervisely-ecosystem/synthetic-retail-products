@@ -21,7 +21,7 @@
 
 # Overview
 
-App generates synthetic data for classification and segmentation tasks. This data can be successfully used to train classification or segmentation models and then use them to recognize and classify products on grocery store shelves.
+App generates synthetic data for classification and segmentation tasks. This data can be successfully used to train classification or segmentation models and then use them as AI assistance in special apps right in Labeling UI to recognize and classify products on grocery store shelves.
 
 # How To Use
 
@@ -48,8 +48,8 @@ App generates synthetic data for classification and segmentation tasks. This dat
 **Watch demo video**:
 
 
-<a data-key="sly-embeded-video-link" href="https://youtu.be/DazA1SSQOK8" data-video-code="DazA1SSQOK8">
-    <img src="https://i.imgur.com/TDGyy1E.png" alt="SLY_EMBEDED_VIDEO_LINK"  style="max-width:100%;">
+<a data-key="sly-embeded-video-link" href="https://youtu.be/jXoRTBjzBz8" data-video-code="jXoRTBjzBz8">
+    <img src="https://i.imgur.com/dlO97AV.png" alt="SLY_EMBEDED_VIDEO_LINK"  style="max-width:100%;">
 </a>
 
 # Screenshots
