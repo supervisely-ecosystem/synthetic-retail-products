@@ -25,6 +25,13 @@ App generates synthetic data for classification and segmentation tasks. This dat
 
 # How To Use
 
+**Watch demo video**:
+
+
+<a data-key="sly-embeded-video-link" href="https://youtu.be/jXoRTBjzBz8" data-video-code="jXoRTBjzBz8">
+    <img src="https://i.imgur.com/dlO97AV.png" alt="SLY_EMBEDED_VIDEO_LINK"  style="max-width:100%;">
+</a>
+
 
 1. Prepare your data: label products with polygons or bitmaps, assign tag (product identifier) to every labeled object. For example, if you have 50 items in your catalog, project will have 50 tags and just label at least one example for every item in a catalog and assign corresponding tag to the object.  You can use ready example project [Snacks Catalog](https://ecosystem.supervise.ly/projects/snacks-catalog) from ecosystem. In this demo project we labeled one object per image. You can label several objects on a single image (for example: if you want to label examples on photos of product shelves).
 
@@ -43,14 +50,6 @@ App generates synthetic data for classification and segmentation tasks. This dat
 6. New project with synthetic data will be created, app will be closed automatically. For every product in  labeled catalog will be created a separate dataset, synthetic images have object mask, tag of the product (i.e. product id), and `train` or `val` tag (defines if the image is in training or validation set).
 
 <img src="https://i.imgur.com/GymxBvj.png"/>
-
-
-**Watch demo video**:
-
-
-<a data-key="sly-embeded-video-link" href="https://youtu.be/jXoRTBjzBz8" data-video-code="jXoRTBjzBz8">
-    <img src="https://i.imgur.com/dlO97AV.png" alt="SLY_EMBEDED_VIDEO_LINK"  style="max-width:100%;">
-</a>
 
 # Screenshots
 
