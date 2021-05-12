@@ -197,6 +197,9 @@ def generate_example(augs_settings, augs=None, preview=True, product_id=None, im
     if logging.getLevelName(sly.logger.level) == 'DEBUG':
         sly.image.write(os.path.join(vis_dir, "06_final_mask.png"), label_mask)
 
+    if not np.any(label_mask):  # if empty mask - figure may be entirely covered by others
+        return None, None, None
+
     label_preview = None
     if preview is True:
         label_preview = sly.Label(
@@ -205,6 +208,18 @@ def generate_example(augs_settings, augs=None, preview=True, product_id=None, im
         )
 
     return label_image, label_mask, label_preview
+
+
+def try_generate_example(augs_settings, augs=None, preview=True, product_id=None, img=None, ann=None, max_attempts=5):
+    for attempt in range(max_attempts):
+        label_image, label_mask, label_preview = generate_example(augs_settings, augs, preview=preview,
+                                                                  product_id=product_id, img=img, ann=ann)
+        if label_image is None:
+            sly.logger.warn(f"Target product is completely covered by noise objects, example will be regenerated. "
+                            f"Attempt {attempt} / {max_attempts}")
+        else:
+            return label_image, label_mask, label_preview
+    raise RuntimeError("Attempts limit exceeded: empty mask, contact support")
 
 
 @app.callback("preview")
@@ -218,7 +233,7 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
     preview_images = []
 
     for i in range(count):
-        label_image, label_mask, label_preview = generate_example(augs_settings, augs, True)
+        label_image, label_mask, label_preview = try_generate_example(augs_settings, augs, True)
 
         preview_local_path = os.path.join(vis_dir, f"preview_image_{i}.png")
         preview_remote_path = os.path.join(f"/synthetic-retail-products/{task_id}", f"preview_image_{i}.png")
@@ -294,8 +309,9 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
                 image_id = random.choice(list(PRODUCTS[product_id].keys()))
                 img = images[image_id]
                 ann = random.choice(list(PRODUCTS[product_id][image_id]))
-                label_image, label_mask, label_preview = generate_example(augs_settings, augs, preview=True,
-                                                                          product_id=product_id, img=img, ann=ann)
+
+                label_image, label_mask, label_preview = try_generate_example(augs_settings, augs, preview=True,
+                                                                              product_id=product_id, img=img, ann=ann)
                 res_ann = sly.Annotation(label_image.shape[:2],
                                          labels=[label_preview],
                                          img_tags=sly.TagCollection([tag, sly.Tag(tag_meta)]))
