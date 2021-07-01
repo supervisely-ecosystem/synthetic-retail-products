@@ -1,4 +1,4 @@
-supervisely==6.1.78
+supervisely==6.1.86
 PyYAML==5.4.1
 albumentations==0.5.2
 imgaug==0.4.0

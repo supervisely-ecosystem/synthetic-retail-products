@@ -224,6 +224,7 @@ def try_generate_example(augs_settings, augs=None, preview=True, product_id=None
 
 @app.callback("preview")
 @sly.timeit
+@app.ignore_errors_and_show_dialog_window()
 def preview(api: sly.Api, task_id, context, state, app_logger):
     count = state["previewCount"]
     augs_settings = yaml.safe_load(state["augs"])
@@ -269,6 +270,7 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
 
 @app.callback("generate")
 @sly.timeit
+@app.ignore_errors_and_show_dialog_window()
 def generate(api: sly.Api, task_id, context, state, app_logger):
     global PRODUCT_TAGS
     products_count = len(PRODUCTS.keys())
@@ -310,8 +312,27 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
                 img = images[image_id]
                 ann = random.choice(list(PRODUCTS[product_id][image_id]))
 
-                label_image, label_mask, label_preview = try_generate_example(augs_settings, augs, preview=True,
-                                                                              product_id=product_id, img=img, ann=ann)
+                label_image = None
+                label_mask = None
+                label_preview = None
+                retry_count = 5
+                for retry_idx in range(5):
+                    try:
+                        label_image, label_mask, label_preview = \
+                            try_generate_example(
+                                augs_settings,
+                                augs,
+                                preview=True,
+                                product_id=product_id,
+                                img=img,
+                                ann=ann
+                            )
+                        break
+                    except Exception as e:
+                        if retry_idx == retry_count - 1:
+                            raise e
+                        continue
+
                 res_ann = sly.Annotation(label_image.shape[:2],
                                          labels=[label_preview],
                                          img_tags=sly.TagCollection([tag, sly.Tag(tag_meta)]))
