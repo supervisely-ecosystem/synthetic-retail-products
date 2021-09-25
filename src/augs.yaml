@@ -4,6 +4,8 @@ target:
   background: "random_color"
   # or
   #background: "keep_original"
+  # or
+  #background: "random_image"
 
   # e.g. 0.1 - 10% padding around bbox
   padCrop: 0.1

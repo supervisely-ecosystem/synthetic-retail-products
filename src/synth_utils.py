@@ -1,7 +1,19 @@
 import numpy as np
 import cv2
 import supervisely_lib as sly
+import os
+import random
 
+def get_files_paths(src_dir, extensions):
+    files_paths = []
+    for root, dirs, files in os.walk(src_dir):
+        for extension in extensions:
+            for file in files:
+                if file.endswith(extension):
+                    file_path = os.path.join(root, file)
+                    files_paths.append(file_path)
+
+    return files_paths
 
 def crop_label(img, ann: sly.Annotation, padding):
     h, w, _ = img.shape
@@ -33,6 +45,32 @@ def crop_label(img, ann: sly.Annotation, padding):
 
 def randomize_bg_color(img, mask):
     color_img = create_blank(img.shape[0], img.shape[1], sly.color.random_rgb())
+    fg_h, fg_w, _ = mask.shape
+    fg = cv2.bitwise_and(img, mask)
+    bg_mask = 255 - mask
+    color_img[0:fg_h, 0:fg_w, :] = cv2.bitwise_and(color_img[0:fg_h, 0:fg_w, :], bg_mask) + fg
+    return color_img
+
+
+def get_random_crop(image, crop_height, crop_width):
+
+    max_x = image.shape[1] - crop_width
+    max_y = image.shape[0] - crop_height
+
+    x = np.random.randint(0, max_x)
+    y = np.random.randint(0, max_y)
+
+    crop = image[y: y + crop_height, x: x + crop_width]
+
+    return crop
+
+
+def randomize_bg_image(img, mask, backgrounds_dir):
+    image_path = random.choice(get_files_paths(backgrounds_dir, ['.jpg', '.png']))
+
+    background_image = cv2.imread(image_path)
+    color_img = get_random_crop(background_image, img.shape[0], img.shape[1])
+    # color_img = create_blank(img.shape[0], img.shape[1], sly.color.random_rgb())
     fg_h, fg_w, _ = mask.shape
     fg = cv2.bitwise_and(img, mask)
     bg_mask = 255 - mask

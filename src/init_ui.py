@@ -81,3 +81,23 @@ def init_res_project(data, state):
     data["started"] = False
 
 
+def init_bg_project_params(data, state):
+    state["bgTeamId"] = None
+    state["bgWorkspaceId"] = None
+    state["bgProjectId"] = None
+    state["allDatasets"] = True
+    state["bgDatasets"] = []
+
+    state['backgroundsLoading'] = False
+    state['backgroundsDownloaded'] = False
+
+    data["progressDownloadBackgrounds"] = None
+    data["progressDownloadBackgroundsMessage"] = None
+    data["progressDownloadBackgroundsCurrent"] = None
+    data["progressDownloadBackgroundsTotal"] = None
+    data["progressDownloadBackgroundsPercent"] = None
+
+
+
+
+
