@@ -1,5 +1,7 @@
 supervisely==6.1.86
-PyYAML==5.4.1
-albumentations==0.5.2
+pyyaml==6.0
 imgaug==0.4.0
 imagecorruptions==1.1.2
+opencv-python-headless==3.4.10.35
+opencv-python==3.4.10.35
+albumentations
