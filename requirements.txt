@@ -5,3 +5,4 @@ imgaug==0.4.0
 imagecorruptions==1.1.2
 opencv-python-headless==3.4.10.35
 opencv-python==3.4.10.35
+pyyaml==6.0
