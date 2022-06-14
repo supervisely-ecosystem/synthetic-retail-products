@@ -5,16 +5,17 @@ import yaml
 import cv2
 import numpy as np
 import logging
-import supervisely_lib as sly
+import supervisely as sly
+from supervisely.app.v1.app_service import AppService
 import augs
 
 from init_ui import init_input_project, init_augs, init_preview, empty_gallery, CNT_GRID_COLUMNS, init_output, \
-                    refresh_progress, init_res_project
+    refresh_progress, init_res_project
 
 from synth_utils import crop_label, draw_white_mask, randomize_bg_color
 from synth_utils import crops_funcs, place_funcs, get_y_range, get_x_range
 
-app: sly.AppService = sly.AppService()
+app: AppService = AppService()
 
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
@@ -25,9 +26,8 @@ if PROJECT_INFO is None:
     raise RuntimeError(f"Project id={PROJECT_ID} not found")
 META = sly.ProjectMeta.from_json(app.public_api.project.get_meta(PROJECT_ID))
 
-
 ALL_IMAGES_INFO = {}  # image id -> image info
-IMAGE_PATH = {} # image id -> local path
+IMAGE_PATH = {}  # image id -> local path
 PRODUCTS = defaultdict(lambda: defaultdict(list))  # tag name (i.e. product-id) -> image id -> list of labels
 
 # for debug
@@ -39,6 +39,7 @@ RESULT_CLASS = sly.ObjClass("product", sly.Bitmap, [0, 0, 255])
 TRAIN_TAG = sly.TagMeta("train", sly.TagValueType.NONE, color=[0, 255, 0])
 VAL_TAG = sly.TagMeta("val", sly.TagValueType.NONE, color=[255, 255, 0])
 PRODUCT_TAGS = sly.TagMetaCollection()
+
 
 def validate_project_meta():
     global META
@@ -69,7 +70,7 @@ def cache_annotations(api: sly.Api, task_id, data):
 
     cache_dir = os.path.join(app.data_dir, "cache")
     sly.fs.mkdir(cache_dir)
-    #sly.fs.clean_dir(cache_dir)
+    # sly.fs.clean_dir(cache_dir)
 
     num_images_with_products = 0
     num_product_examples = 0
@@ -106,7 +107,8 @@ def cache_annotations(api: sly.Api, task_id, data):
                             PRODUCT_TAGS = PRODUCT_TAGS.add(tag.meta)
 
                 if num_image_products == 0:
-                    sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tagged products")
+                    sly.logger.warn(
+                        f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have tagged products")
                     continue
 
                 num_images_with_products += 1
@@ -246,7 +248,7 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
         file_info = api.file.upload(TEAM_ID, preview_local_path, preview_remote_path)
 
         preview_labels.append(label_preview)
-        preview_images.append(file_info.full_storage_url)
+        preview_images.append(file_info.storage_path)
 
     gallery = dict(empty_gallery)
     gallery["content"]["projectMeta"] = META.to_json()

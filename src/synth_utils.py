@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import supervisely_lib as sly
+import supervisely as sly
 
 
 def crop_label(img, ann: sly.Annotation, padding):
