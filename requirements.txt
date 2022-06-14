@@ -3,6 +3,6 @@ supervisely[apps]==6.23.1
 pyyaml==6.0
 imgaug==0.4.0
 imagecorruptions==1.1.2
-opencv-python-headless==3.4.10.35
-opencv-python==3.4.10.35
-albumentations
+opencv-python-headless==4.5.5.62
+opencv-python==4.5.5.62
+albumentations==1.1.0
