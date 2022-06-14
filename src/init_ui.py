@@ -3,7 +3,7 @@ import yaml
 from pathlib import Path
 import sys
 import json
-import supervisely_lib as sly
+import supervisely as sly
 
 
 def init_input_project(api: sly.Api, data: dict, project_info):

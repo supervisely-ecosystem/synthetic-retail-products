@@ -5,7 +5,8 @@ import yaml
 import cv2
 import numpy as np
 import logging
-import supervisely_lib as sly
+import supervisely as sly
+from supervisely.app.v1.app_service import AppService
 import augs
 
 from init_ui import init_input_project, init_augs, init_preview, empty_gallery, CNT_GRID_COLUMNS, init_output, \
@@ -14,7 +15,7 @@ from init_ui import init_input_project, init_augs, init_preview, empty_gallery, 
 from synth_utils import crop_label, draw_white_mask, randomize_bg_color
 from synth_utils import crops_funcs, place_funcs, get_y_range, get_x_range
 
-app: sly.AppService = sly.AppService()
+app: AppService = AppService()
 
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
@@ -246,7 +247,7 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
         file_info = api.file.upload(TEAM_ID, preview_local_path, preview_remote_path)
 
         preview_labels.append(label_preview)
-        preview_images.append(file_info.full_storage_url)
+        preview_images.append(file_info.storage_path)
 
     gallery = dict(empty_gallery)
     gallery["content"]["projectMeta"] = META.to_json()
