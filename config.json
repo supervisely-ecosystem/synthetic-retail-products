@@ -6,7 +6,8 @@
     "images",
     "classification",
     "nn tools",
-    "synthetic"
+    "synthetic",
+    "data-operations"
   ],
   "description": "Generate synthetic data for classification of retail products on grocery shelves",
   "docker_image": "supervisely/base-py-sdk:6.23.1",
