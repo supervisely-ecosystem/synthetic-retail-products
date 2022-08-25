@@ -1,5 +1,5 @@
 <div align="center" markdown>
-<img src="https://i.imgur.com/nOVbVMv.png"/>
+<img src="https://user-images.githubusercontent.com/106374579/186656823-7520b95f-c386-4540-bfae-9e672a8d9a81.png"/>
 
 # Generate Synthetic Retail Products
 
