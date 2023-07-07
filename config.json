@@ -16,7 +16,7 @@
   "gui_template": "src/gui.html",
   "task_location": "workspace_tasks",
   "isolate": true,
-  "icon": "https://img.icons8.com/color/100/000000/sauce-bottle.png",
+  "icon": "media/icon.png",
   "icon_background": "#FFFFFF",
   "context_menu": {
     "target": [
