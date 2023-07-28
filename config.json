@@ -1,29 +1,29 @@
 {
-  "name": "Synthetic retail products",
-  "type": "app",
-  "categories": [
-    "neural network",
-    "images",
-    "classification",
-    "nn tools",
-    "synthetic",
-    "data operations"
-  ],
-  "description": "Generate synthetic data for classification of retail products on grocery shelves",
-  "docker_image": "supervisely/base-py-sdk:6.35.0",
-  "instance_version": "6.4.57",
-  "main_script": "src/main.py",
-  "gui_template": "src/gui.html",
-  "task_location": "workspace_tasks",
-  "isolate": true,
-  "icon": "https://img.icons8.com/color/100/000000/sauce-bottle.png",
-  "icon_background": "#FFFFFF",
-  "context_menu": {
-    "target": [
-      "images_project"
+    "name": "Synthetic retail products",
+    "type": "app",
+    "categories": [
+        "neural network",
+        "images",
+        "classification",
+        "nn tools",
+        "synthetic",
+        "data operations"
     ],
-    "context_category": "Synthetic data"
-  },
-  "poster": "https://user-images.githubusercontent.com/106374579/186656823-7520b95f-c386-4540-bfae-9e672a8d9a81.png",
-  "community_agent": false
+    "description": "Generate synthetic data for classification of retail products on grocery shelves",
+    "docker_image": "supervisely/synthetic:0.0.1",
+    "instance_version": "6.4.57",
+    "main_script": "src/main.py",
+    "gui_template": "src/gui.html",
+    "task_location": "workspace_tasks",
+    "isolate": true,
+    "icon": "https://img.icons8.com/color/100/000000/sauce-bottle.png",
+    "icon_background": "#FFFFFF",
+    "context_menu": {
+        "target": [
+            "images_project"
+        ],
+        "context_category": "Synthetic data"
+    },
+    "poster": "https://user-images.githubusercontent.com/106374579/186656823-7520b95f-c386-4540-bfae-9e672a8d9a81.png",
+    "community_agent": false
 }
