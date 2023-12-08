@@ -381,8 +381,8 @@ def main():
         cache_annotations(app.public_api, app.task_id, data)
         app.run(data=data, state=state)
     except ValueError as ve:
-        sly.logger.error(str(ve))
         app.public_api.task.set_output_error(app.task_id, str(ve))
+        app.show_modal_window(str(ve), level='error')
         app.stop()
 
 
