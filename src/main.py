@@ -63,7 +63,7 @@ def validate_project_meta():
         cnt_valid_tags += 1
     if cnt_valid_tags <= 1:
         raise ValueError("Project should have at least two tags with value_type NONE (tags without values)")
-
+    
 
 def cache_annotations(api: sly.Api, task_id, data):
     global PRODUCTS, IMAGE_PATH, PRODUCT_TAGS
@@ -88,6 +88,7 @@ def cache_annotations(api: sly.Api, task_id, data):
 
                 if len(ann.labels) == 0:
                     sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have labels")
+                    continue
 
                 num_image_products = 0
                 for label in ann.labels:
@@ -228,6 +229,12 @@ def try_generate_example(augs_settings, augs=None, preview=True, product_id=None
 @sly.timeit
 @app.ignore_errors_and_show_dialog_window()
 def preview(api: sly.Api, task_id, context, state, app_logger):
+    if len(PRODUCTS.keys()) == 0:
+        api.task.set_fields(task_id, [{"field": "state.previewLoading", "payload": False}])
+        msg = "Project doesn't have tagged labels."
+        desc = "Please assign NONE type tags to labels."
+        app.public_api.task.set_output_error(app.task_id, msg, desc)
+        raise ValueError(f"{msg} {desc}")
     count = state["previewCount"]
     augs_settings = yaml.safe_load(state["augs"])
     augs.init_fg_augs(augs_settings)
@@ -276,6 +283,12 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
 def generate(api: sly.Api, task_id, context, state, app_logger):
     global PRODUCT_TAGS
     products_count = len(PRODUCTS.keys())
+    if products_count == 0:
+        api.task.set_fields(task_id, [{"field": "data.started", "payload": False}])
+        msg = "Project doesn't have tagged labels."
+        desc = "Please assign NONE type tags to labels."
+        app.public_api.task.set_output_error(app.task_id, msg, desc)
+        raise ValueError(f"{msg} {desc}")
     train_count = state["trainCount"]
     val_count = state["valCount"]
     total_count = products_count * (train_count + val_count)
@@ -374,7 +387,6 @@ def main():
 
     validate_project_meta()
     cache_annotations(app.public_api, app.task_id, data)
-
     app.run(data=data, state=state)
 
 
