@@ -132,6 +132,10 @@ def cache_annotations(api: sly.Api, task_id, data):
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
 
+    if len(PRODUCTS.keys()) == 0:
+        msg = "Project doesn't have tagged labels. Please assign NONE type tags to labels."
+        raise ValueError(msg)
+
     data["imagesWithProductsCount"] = num_images_with_products
     data["productsCount"] = len(PRODUCTS.keys())
     data["examplesCount"] = num_product_examples
@@ -372,10 +376,14 @@ def main():
     init_output(data, state)
     init_res_project(data, state)
 
-    validate_project_meta()
-    cache_annotations(app.public_api, app.task_id, data)
-
-    app.run(data=data, state=state)
+    try:
+        validate_project_meta()
+        cache_annotations(app.public_api, app.task_id, data)
+        app.run(data=data, state=state)
+    except ValueError as ve:
+        sly.logger.error(str(ve))
+        app.public_api.task.set_output_error(app.task_id, str(ve))
+        app.stop()
 
 
 if __name__ == "__main__":
