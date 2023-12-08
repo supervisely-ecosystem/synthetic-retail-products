@@ -43,31 +43,26 @@ PRODUCT_TAGS = sly.TagMetaCollection()
 
 def validate_project_meta():
     global META
-    try:
-        if len(META.obj_classes) == 0:
-            raise ValueError("Project should have at least one class")
-        cnt_valid_classes = 0
-        for obj_class in META.obj_classes:
-            obj_class: sly.ObjClass
-            if obj_class.geometry_type in [sly.Polygon, sly.Bitmap]:
-                cnt_valid_classes += 1
-        if cnt_valid_classes == 0:
-            raise ValueError("Project should have at least one class of type polygon or bitmap")
+    if len(META.obj_classes) == 0:
+        raise ValueError("Project should have at least one class")
+    cnt_valid_classes = 0
+    for obj_class in META.obj_classes:
+        obj_class: sly.ObjClass
+        if obj_class.geometry_type in [sly.Polygon, sly.Bitmap]:
+            cnt_valid_classes += 1
+    if cnt_valid_classes == 0:
+        raise ValueError("Project should have at least one class of type polygon or bitmap")
 
-        if len(META.tag_metas) == 0:
-            raise ValueError("Project should have at least two tags")
-        cnt_valid_tags = 0
-        for tag_meta in META.tag_metas:
-            tag_meta: sly.TagMeta
-            if tag_meta.value_type != sly.TagValueType.NONE:
-                continue
-            cnt_valid_tags += 1
-        if cnt_valid_tags <= 1:
-            raise ValueError("Project should have at least two tags with value_type NONE (tags without values)")
-    except ValueError as ve:
-        app.public_api.task.set_output_error(app.task_id, str(ve))
-        app.show_modal_window(str(ve), level='error')
-        app.stop()
+    if len(META.tag_metas) == 0:
+        raise ValueError("Project should have at least two tags")
+    cnt_valid_tags = 0
+    for tag_meta in META.tag_metas:
+        tag_meta: sly.TagMeta
+        if tag_meta.value_type != sly.TagValueType.NONE:
+            continue
+        cnt_valid_tags += 1
+    if cnt_valid_tags <= 1:
+        raise ValueError("Project should have at least two tags with value_type NONE (tags without values)")
     
 
 def cache_annotations(api: sly.Api, task_id, data):
