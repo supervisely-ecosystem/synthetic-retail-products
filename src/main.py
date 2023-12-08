@@ -236,7 +236,10 @@ def try_generate_example(augs_settings, augs=None, preview=True, product_id=None
 def preview(api: sly.Api, task_id, context, state, app_logger):
     if len(PRODUCTS.keys()) == 0:
         api.task.set_fields(task_id, [{"field": "state.previewLoading", "payload": False}])
-        raise ValueError("Project doesn't have tagged labels. Please assign NONE type tags to labels.")
+        msg = "Project doesn't have tagged labels."
+        desc = "Please assign NONE type tags to labels."
+        app.public_api.task.set_output_error(app.task_id, msg, desc)
+        raise ValueError(f"{msg} {desc}")
     count = state["previewCount"]
     augs_settings = yaml.safe_load(state["augs"])
     augs.init_fg_augs(augs_settings)
@@ -287,7 +290,10 @@ def generate(api: sly.Api, task_id, context, state, app_logger):
     products_count = len(PRODUCTS.keys())
     if products_count == 0:
         api.task.set_fields(task_id, [{"field": "data.started", "payload": False}])
-        raise ValueError("Project doesn't have tagged labels. Please assign NONE type tags to labels.")
+        msg = "Project doesn't have tagged labels."
+        desc = "Please assign NONE type tags to labels."
+        app.public_api.task.set_output_error(app.task_id, msg, desc)
+        raise ValueError(f"{msg} {desc}")
     train_count = state["trainCount"]
     val_count = state["valCount"]
     total_count = products_count * (train_count + val_count)
