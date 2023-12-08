@@ -43,27 +43,32 @@ PRODUCT_TAGS = sly.TagMetaCollection()
 
 def validate_project_meta():
     global META
-    if len(META.obj_classes) == 0:
-        raise ValueError("Project should have at least one class")
-    cnt_valid_classes = 0
-    for obj_class in META.obj_classes:
-        obj_class: sly.ObjClass
-        if obj_class.geometry_type in [sly.Polygon, sly.Bitmap]:
-            cnt_valid_classes += 1
-    if cnt_valid_classes == 0:
-        raise ValueError("Project should have at least one class of type polygon or bitmap")
+    try:
+        if len(META.obj_classes) == 0:
+            raise ValueError("Project should have at least one class")
+        cnt_valid_classes = 0
+        for obj_class in META.obj_classes:
+            obj_class: sly.ObjClass
+            if obj_class.geometry_type in [sly.Polygon, sly.Bitmap]:
+                cnt_valid_classes += 1
+        if cnt_valid_classes == 0:
+            raise ValueError("Project should have at least one class of type polygon or bitmap")
 
-    if len(META.tag_metas) == 0:
-        raise ValueError("Project should have at least two tags")
-    cnt_valid_tags = 0
-    for tag_meta in META.tag_metas:
-        tag_meta: sly.TagMeta
-        if tag_meta.value_type != sly.TagValueType.NONE:
-            continue
-        cnt_valid_tags += 1
-    if cnt_valid_tags <= 1:
-        raise ValueError("Project should have at least two tags with value_type NONE (tags without values)")
-
+        if len(META.tag_metas) == 0:
+            raise ValueError("Project should have at least two tags")
+        cnt_valid_tags = 0
+        for tag_meta in META.tag_metas:
+            tag_meta: sly.TagMeta
+            if tag_meta.value_type != sly.TagValueType.NONE:
+                continue
+            cnt_valid_tags += 1
+        if cnt_valid_tags <= 1:
+            raise ValueError("Project should have at least two tags with value_type NONE (tags without values)")
+    except ValueError as ve:
+        app.public_api.task.set_output_error(app.task_id, str(ve))
+        app.show_modal_window(str(ve), level='error')
+        app.stop()
+    
 
 def cache_annotations(api: sly.Api, task_id, data):
     global PRODUCTS, IMAGE_PATH, PRODUCT_TAGS
@@ -88,6 +93,7 @@ def cache_annotations(api: sly.Api, task_id, data):
 
                 if len(ann.labels) == 0:
                     sly.logger.warn(f"image {image_info.name} (id={image_info.id}) is skipped: doesn't have labels")
+                    continue
 
                 num_image_products = 0
                 for label in ann.labels:
@@ -131,10 +137,6 @@ def cache_annotations(api: sly.Api, task_id, data):
 
     progress = sly.Progress("App is ready", 1)
     progress.iter_done_report()
-
-    if len(PRODUCTS.keys()) == 0:
-        msg = "Project doesn't have tagged labels. Please assign NONE type tags to labels."
-        raise ValueError(msg)
 
     data["imagesWithProductsCount"] = num_images_with_products
     data["productsCount"] = len(PRODUCTS.keys())
@@ -232,6 +234,9 @@ def try_generate_example(augs_settings, augs=None, preview=True, product_id=None
 @sly.timeit
 @app.ignore_errors_and_show_dialog_window()
 def preview(api: sly.Api, task_id, context, state, app_logger):
+    if len(PRODUCTS.keys()) == 0:
+        api.task.set_fields(task_id, [{"field": "data.previewLoading", "payload": False}])
+        raise ValueError("Project doesn't have tagged labels. Please assign NONE type tags to labels.")
     count = state["previewCount"]
     augs_settings = yaml.safe_load(state["augs"])
     augs.init_fg_augs(augs_settings)
@@ -280,6 +285,9 @@ def preview(api: sly.Api, task_id, context, state, app_logger):
 def generate(api: sly.Api, task_id, context, state, app_logger):
     global PRODUCT_TAGS
     products_count = len(PRODUCTS.keys())
+    if products_count == 0:
+        api.task.set_fields(task_id, [{"field": "data.started", "payload": False}])
+        raise ValueError("Project doesn't have tagged labels. Please assign NONE type tags to labels.")
     train_count = state["trainCount"]
     val_count = state["valCount"]
     total_count = products_count * (train_count + val_count)
@@ -376,14 +384,9 @@ def main():
     init_output(data, state)
     init_res_project(data, state)
 
-    try:
-        validate_project_meta()
-        cache_annotations(app.public_api, app.task_id, data)
-        app.run(data=data, state=state)
-    except ValueError as ve:
-        app.public_api.task.set_output_error(app.task_id, str(ve))
-        app.show_modal_window(str(ve), level='error')
-        app.stop()
+    validate_project_meta()
+    cache_annotations(app.public_api, app.task_id, data)
+    app.run(data=data, state=state)
 
 
 if __name__ == "__main__":
