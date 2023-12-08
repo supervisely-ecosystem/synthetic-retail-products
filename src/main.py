@@ -235,7 +235,7 @@ def try_generate_example(augs_settings, augs=None, preview=True, product_id=None
 @app.ignore_errors_and_show_dialog_window()
 def preview(api: sly.Api, task_id, context, state, app_logger):
     if len(PRODUCTS.keys()) == 0:
-        api.task.set_fields(task_id, [{"field": "data.previewLoading", "payload": False}])
+        api.task.set_fields(task_id, [{"field": "state.previewLoading", "payload": False}])
         raise ValueError("Project doesn't have tagged labels. Please assign NONE type tags to labels.")
     count = state["previewCount"]
     augs_settings = yaml.safe_load(state["augs"])
