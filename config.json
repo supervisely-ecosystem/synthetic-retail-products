@@ -10,7 +10,7 @@
         "data operations"
     ],
     "description": "Generate synthetic data for classification of retail products on grocery shelves",
-    "docker_image": "supervisely/synthetic:6.72.205",
+    "docker_image": "supervisely/synthetic:6.72.208",
     "instance_version": "6.8.48",
     "main_script": "src/main.py",
     "gui_template": "src/gui.html",
