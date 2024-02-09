@@ -1,4 +1,4 @@
-supervisely==6.72.215
+supervisely==6.72.216
 supervisely[apps]==6.35.0
 pyyaml==6.0
 imgaug==0.4.0
