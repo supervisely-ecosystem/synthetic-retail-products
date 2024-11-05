@@ -10,11 +10,11 @@
 </p>
 
 
-[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](https://ecosystem.supervise.ly/apps/synthetic-retail-products)
-[![](https://img.shields.io/badge/slack-chat-green.svg?logo=slack)](https://supervise.ly/slack)
+[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](https://ecosystem.supervisely.com/apps/synthetic-retail-products)
+[![](https://img.shields.io/badge/slack-chat-green.svg?logo=slack)](https://supervisely.com/slack)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/supervisely-ecosystem/synthetic-retail-products)
-[![views](https://app.supervise.ly/img/badges/views/supervisely-ecosystem/synthetic-retail-products.png)](https://supervise.ly)
-[![runs](https://app.supervise.ly/img/badges/runs/supervisely-ecosystem/synthetic-retail-products.png)](https://supervise.ly)
+[![views](https://app.supervisely.com/img/badges/views/supervisely-ecosystem/synthetic-retail-products.png)](https://supervisely.com)
+[![runs](https://app.supervisely.com/img/badges/runs/supervisely-ecosystem/synthetic-retail-products.png)](https://supervisely.com)
 
 </div>
 
@@ -32,7 +32,7 @@ App generates synthetic data for classification and segmentation tasks. This dat
 </a>
 
 
-1. Prepare your data: label products with polygons or bitmaps, assign tag (product identifier) to every labeled object. For example, if you have 50 items in your catalog, project will have 50 tags and just label at least one example for every item in a catalog and assign corresponding tag to the object.  You can use ready example project [Snacks Catalog](https://ecosystem.supervise.ly/projects/snacks-catalog) from ecosystem. In this demo project we labeled one object per image. You can label several objects on a single image (for example: if you want to label examples on photos of product shelves).
+1. Prepare your data: label products with polygons or bitmaps, assign tag (product identifier) to every labeled object. For example, if you have 50 items in your catalog, project will have 50 tags and just label at least one example for every item in a catalog and assign corresponding tag to the object.  You can use ready example project [Snacks Catalog](https://ecosystem.supervisely.com/projects/snacks-catalog) from ecosystem. In this demo project we labeled one object per image. You can label several objects on a single image (for example: if you want to label examples on photos of product shelves).
 
 <img  data-key="sly-module-link" data-module-slug="supervisely-ecosystem/snacks-catalog" src="https://i.imgur.com/7YPoLGY.png" width="450"/> 
 
