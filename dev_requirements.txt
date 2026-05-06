@@ -1,5 +1,5 @@
-supervisely==6.73.22
-supervisely[apps]==6.35.0
+supervisely==6.73.564
+supervisely[apps]==6.73.564
 pyyaml==6.0
 imgaug==0.4.0
 imagecorruptions==1.1.2
